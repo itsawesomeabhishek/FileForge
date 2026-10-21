@@ -3,6 +3,8 @@ name = "fileforge"
 version = "0.1.0"
 description = "FileForge - local file converter for Windows"
 authors = ["Abhishek"]
+license = "GPL-3.0-only"
+repository = "https://github.com/itsawesomeabhishek/FileForge"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -45,7 +45,16 @@ cd src-tauri; cargo test
 Project notes live in `context/` (architecture, UI, standards, and the
 progress tracker).
 
-## License note
+## Contributing
 
-The bundled FFmpeg is the GPL "essentials" build from gyan.dev. Review
-its licence before redistributing the installer.
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md) first. Report security
+problems privately as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+FileForge is released under the [GNU General Public License v3.0](LICENSE).
+
+The installer bundles the GPL "essentials" FFmpeg build from gyan.dev,
+which has its own licence terms. Review them before redistributing the
+installer.

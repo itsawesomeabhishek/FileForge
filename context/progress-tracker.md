@@ -112,6 +112,11 @@ phases; only the convert wheel exists so far.
     carried over.
   - References to the macOS source app `exploit` are unchanged.
   - `cargo test` (70) and `npm run build` pass.
+- Added community files: `LICENSE` (GPL-3.0, chosen because the
+  bundled FFmpeg build is GPL), `CODE_OF_CONDUCT.md` (Contributor
+  Covenant 2.1), `CONTRIBUTING.md`, `SECURITY.md`; license metadata
+  in `Cargo.toml` and `package.json`; README Contributing and
+  License sections.
 
 ## In Progress
 
