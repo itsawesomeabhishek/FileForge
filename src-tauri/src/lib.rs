@@ -31,7 +31,7 @@ pub fn run() {
         .setup(|app| {
             let config_dir = app.path().app_config_dir()?;
             let log_dir = app.path().app_log_dir()?;
-            diag::init(log_dir.join("exploit.log"));
+            diag::init(log_dir.join("fileforge.log"));
 
             app.manage(settings::SettingsStore::load(config_dir.join("settings.json")));
             app.manage(jobs::JobQueue::start(app.handle().clone()));

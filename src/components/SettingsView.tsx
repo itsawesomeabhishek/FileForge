@@ -117,7 +117,7 @@ export default function SettingsView() {
                 .catch((err) => setError(String(err)))
             }
           />
-          <span className="setting-label">Start exploit when I sign in</span>
+          <span className="setting-label">Start FileForge when I sign in</span>
         </label>
       </section>
 

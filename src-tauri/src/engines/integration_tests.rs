@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::{convert, ConversionRequest, ConvertOptions};
-use crate::error::ExploitError;
+use crate::error::ForgeError;
 use crate::ffmpeg::{self, CancelToken, ProgressFn};
 use crate::formats::FileFormat;
 use crate::matrix;
@@ -15,7 +15,7 @@ struct Workspace(PathBuf);
 
 impl Workspace {
     fn new() -> Self {
-        let dir = std::env::temp_dir().join(format!("exploit-it-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("fileforge-it-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         Self(dir)
     }
@@ -85,7 +85,7 @@ fn run_convert(
     source: &Path,
     target: FileFormat,
     cancel: CancelToken,
-) -> Result<PathBuf, ExploitError> {
+) -> Result<PathBuf, ForgeError> {
     let source_format = FileFormat::detect(source).expect("known source format");
     let destination = matrix::output_path(source, target, &ws.0, &HashSet::new());
     let request = ConversionRequest {
@@ -113,7 +113,7 @@ fn no_temp_files_left(ws: &Workspace) {
     let leftovers: Vec<_> = std::fs::read_dir(&ws.0)
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_name().to_string_lossy().starts_with(".exploit-"))
+        .filter(|e| e.file_name().to_string_lossy().starts_with(".fileforge-"))
         .collect();
     assert!(leftovers.is_empty(), "temp files left behind: {leftovers:?}");
 }
@@ -252,7 +252,7 @@ fn failure_cleans_up_and_reports() {
     let bad = ws.path("broken.png");
     std::fs::write(&bad, b"definitely not a png").unwrap();
     let error = run_convert(&ws, &bad, FileFormat::Jpg, CancelToken::new()).unwrap_err();
-    assert!(matches!(error, ExploitError::InvalidInput(_)), "{error}");
+    assert!(matches!(error, ForgeError::InvalidInput(_)), "{error}");
     no_temp_files_left(&ws);
     assert!(!ws.path("broken.jpg").exists());
 }
@@ -267,7 +267,7 @@ fn cancelled_job_leaves_nothing_behind() {
     let cancel = CancelToken::new();
     cancel.cancel();
     let error = run_convert(&ws, &mp4, FileFormat::Mkv, cancel).unwrap_err();
-    assert!(matches!(error, ExploitError::Cancelled));
+    assert!(matches!(error, ForgeError::Cancelled));
     no_temp_files_left(&ws);
     assert!(!ws.path("clip.mkv").exists());
 }
@@ -277,5 +277,5 @@ fn unsupported_pair_is_rejected() {
     let ws = Workspace::new();
     let png = png_sample(&ws);
     let error = run_convert(&ws, &png, FileFormat::Docx, CancelToken::new()).unwrap_err();
-    assert!(matches!(error, ExploitError::UnsupportedConversion(_, _)));
+    assert!(matches!(error, ForgeError::UnsupportedConversion(_, _)));
 }

@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn persists_and_reloads() {
-        let dir = std::env::temp_dir().join(format!("exploit-set-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("fileforge-set-{}", uuid::Uuid::new_v4()));
         let path = dir.join("settings.json");
         let store = SettingsStore::load(path.clone());
         store

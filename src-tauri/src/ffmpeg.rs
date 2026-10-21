@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use serde::Serialize;
 
-use crate::error::{ExploitError, Result};
+use crate::error::{ForgeError, Result};
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -35,7 +35,7 @@ impl CancelToken {
 
     pub fn check(&self) -> Result<()> {
         if self.is_cancelled() {
-            Err(ExploitError::Cancelled)
+            Err(ForgeError::Cancelled)
         } else {
             Ok(())
         }
@@ -282,7 +282,7 @@ pub fn run(
     progress: &ProgressFn,
     cancel: &CancelToken,
 ) -> Result<()> {
-    let ffmpeg = ffmpeg_path().ok_or_else(|| ExploitError::FfmpegMissing(purpose.to_string()))?;
+    let ffmpeg = ffmpeg_path().ok_or_else(|| ForgeError::FfmpegMissing(purpose.to_string()))?;
     cancel.check()?;
 
     let mut child = command(&ffmpeg)
@@ -292,7 +292,7 @@ pub fn run(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|error| ExploitError::ToolFailed("ffmpeg".into(), error.to_string()))?;
+        .map_err(|error| ForgeError::ToolFailed("ffmpeg".into(), error.to_string()))?;
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -324,14 +324,14 @@ pub fn run(
             let _ = child.wait();
             let _ = progress_thread.join();
             let _ = stderr_thread.join();
-            return Err(ExploitError::Cancelled);
+            return Err(ForgeError::Cancelled);
         }
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) => thread::sleep(Duration::from_millis(40)),
             Err(error) => {
                 let _ = child.kill();
-                return Err(ExploitError::ToolFailed("ffmpeg".into(), error.to_string()));
+                return Err(ForgeError::ToolFailed("ffmpeg".into(), error.to_string()));
             }
         }
     };
@@ -342,7 +342,7 @@ pub fn run(
         progress(1.0);
         Ok(())
     } else {
-        Err(ExploitError::ToolFailed("ffmpeg".into(), summarize(&errors)))
+        Err(ForgeError::ToolFailed("ffmpeg".into(), summarize(&errors)))
     }
 }
 
@@ -379,6 +379,6 @@ mod tests {
         let token = CancelToken::new();
         assert!(token.check().is_ok());
         token.clone().cancel();
-        assert!(matches!(token.check(), Err(ExploitError::Cancelled)));
+        assert!(matches!(token.check(), Err(ForgeError::Cancelled)));
     }
 }

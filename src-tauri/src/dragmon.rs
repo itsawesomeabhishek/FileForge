@@ -211,7 +211,7 @@ pub fn start(app: AppHandle) {
     let _ = APP.set(app.clone());
 
     std::thread::Builder::new()
-        .name("exploit-mouse-hook".into())
+        .name("fileforge-mouse-hook".into())
         .spawn(|| unsafe {
             let module = GetModuleHandleW(None).map(|m| HINSTANCE(m.0)).ok();
             // Start from the real Shift state in case it is already held.
@@ -238,7 +238,7 @@ pub fn start(app: AppHandle) {
         .ok();
 
     std::thread::Builder::new()
-        .name("exploit-drag-controller".into())
+        .name("fileforge-drag-controller".into())
         .spawn(move || controller(app, receiver))
         .ok();
 }

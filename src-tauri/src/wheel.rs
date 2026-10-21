@@ -56,7 +56,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     // creates the child windows that receive file drops once its window has
     // been shown, and wry registers its drop targets on those children.
     let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
-        .title("exploit wheel")
+        .title("FileForge wheel")
         .decorations(false)
         .transparent(true)
         .shadow(false)

@@ -17,7 +17,7 @@ pub fn init(path: PathBuf) {
         let _ = std::fs::remove_file(&path);
     }
     let _ = LOG_PATH.set(path);
-    log("exploit started");
+    log("FileForge started");
 }
 
 pub fn path() -> Option<PathBuf> {

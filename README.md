@@ -1,4 +1,4 @@
-# exploit (Windows)
+# FileForge (Windows)
 
 A local, offline file converter for Windows. Hold **Shift** while
 dragging files from Explorer or the desktop and drop them on a radial

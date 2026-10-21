@@ -9,7 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::diag;
 use crate::engines::{self, ConversionRequest, ConvertOptions};
-use crate::error::ExploitError;
+use crate::error::ForgeError;
 use crate::ffmpeg::{CancelToken, ProgressFn};
 use crate::formats::{FileFormat, FormatCategory};
 use crate::matrix;
@@ -135,7 +135,7 @@ impl JobQueue {
                     Some(format!("{} could not be found.", info.detail))
                 }
                 Some(from) if !engines::supports(from, target) => {
-                    Some(ExploitError::UnsupportedConversion(from, target).to_string())
+                    Some(ForgeError::UnsupportedConversion(from, target).to_string())
                 }
                 Some(_) => None,
             };
@@ -309,7 +309,7 @@ fn run_work(app: &AppHandle, entries: &Entries, work: Work) {
                         revealed = Some(work.destination.clone());
                         diag::log(&format!("done {}", work.destination.display()));
                     }
-                    Err(ExploitError::Cancelled) => entry.info.status = JobStatus::Cancelled,
+                    Err(ForgeError::Cancelled) => entry.info.status = JobStatus::Cancelled,
                     Err(error) => {
                         entry.info.status = JobStatus::Failed;
                         entry.info.error = Some(error.to_string());

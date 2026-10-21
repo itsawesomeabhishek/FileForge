@@ -9,7 +9,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>exploit</h1>
+        <h1>FileForge</h1>
         <span className="muted">Settings</span>
       </header>
       <main className="app-main">

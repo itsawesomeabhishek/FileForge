@@ -1,4 +1,4 @@
-// Dev helper: evaluates a JS expression inside the running exploit webview via
+// Dev helper: evaluates a JS expression inside the running FileForge webview via
 // the WebView2 remote debugging port (start the app with
 // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222).
 //
@@ -9,12 +9,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const port = process.env.CDP_PORT ?? "9222";
 const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-// CDP_TARGET=wheel selects the wheel overlay (its document title is "exploit-wheel").
-const wanted = process.env.CDP_TARGET === "wheel" ? "exploit-wheel" : null;
+// CDP_TARGET=wheel selects the wheel overlay (its document title is "fileforge-wheel").
+const wanted = process.env.CDP_TARGET === "wheel" ? "fileforge-wheel" : null;
 const pages = targets.filter((t) => t.type === "page");
 const page = wanted
   ? pages.find((t) => t.title === wanted)
-  : (pages.find((t) => t.url.includes("localhost:1420") && t.title !== "exploit-wheel") ?? pages.find((t) => t.title !== "exploit-wheel"));
+  : (pages.find((t) => t.url.includes("localhost:1420") && t.title !== "fileforge-wheel") ?? pages.find((t) => t.title !== "fileforge-wheel"));
 if (!page) throw new Error("no page target found");
 
 const socket = new WebSocket(page.webSocketDebuggerUrl);

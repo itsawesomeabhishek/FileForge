@@ -10,7 +10,7 @@ pub mod video;
 
 use std::path::PathBuf;
 
-use crate::error::{ExploitError, Result};
+use crate::error::{ForgeError, Result};
 use crate::ffmpeg::{CancelToken, ProgressFn};
 use crate::formats::FileFormat;
 
@@ -84,7 +84,7 @@ pub fn supports(from: FileFormat, to: FileFormat) -> bool {
 /// any failure.
 pub fn convert(request: &ConversionRequest) -> Result<()> {
     let engine = engine_for(request.source_format, request.target).ok_or(
-        ExploitError::UnsupportedConversion(request.source_format, request.target),
+        ForgeError::UnsupportedConversion(request.source_format, request.target),
     )?;
     crate::diag::log(&format!(
         "engine {} {} -> {} src={}",
@@ -103,7 +103,7 @@ pub fn convert(request: &ConversionRequest) -> Result<()> {
         .extension()
         .map(|e| e.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let temp = directory.join(format!(".exploit-{}.{}", uuid::Uuid::new_v4(), extension));
+    let temp = directory.join(format!(".fileforge-{}.{}", uuid::Uuid::new_v4(), extension));
 
     let staged = ConversionRequest {
         source: request.source.clone(),
@@ -118,7 +118,7 @@ pub fn convert(request: &ConversionRequest) -> Result<()> {
     let result = engine.convert(&staged).and_then(|()| {
         request.cancel.check()?;
         if !temp.is_file() {
-            return Err(ExploitError::EncodeFailed(
+            return Err(ForgeError::EncodeFailed(
                 request
                     .destination
                     .file_name()
@@ -127,7 +127,7 @@ pub fn convert(request: &ConversionRequest) -> Result<()> {
             ));
         }
         if request.destination.exists() {
-            return Err(ExploitError::Io(format!(
+            return Err(ForgeError::Io(format!(
                 "{} already exists.",
                 request.destination.display()
             )));

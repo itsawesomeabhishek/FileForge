@@ -12,8 +12,8 @@
 ## Rust
 
 - No `unwrap()` or `expect()` in non-test code paths that can
-  fail from user input; return `Result<_, ExploitError>`.
-- One error enum (`ExploitError`) with user-readable messages.
+  fail from user input; return `Result<_, ForgeError>`.
+- One error enum (`ForgeError`) with user-readable messages.
 - Never spawn processes through a shell; pass argument arrays.
 - Validate every path received from the UI before use.
 - Unit-test pure logic (formats, matrix, naming, subtitles).
@@ -43,7 +43,7 @@
 
 - Settings are small JSON; media is never copied into app
   storage.
-- Temp output files are hidden (`.exploit-<uuid>.<ext>`) and
+- Temp output files are hidden (`.fileforge-<uuid>.<ext>`) and
   live in the destination directory so the final rename is
   atomic.
 

@@ -1,8 +1,8 @@
-# exploit (Windows)
+# FileForge (Windows)
 
 ## Overview
 
-exploit is a local, offline file converter and file-tool
+FileForge is a local, offline file converter and file-tool
 app. This repository is the Windows port of the macOS
 SwiftUI app at `C:\Users\Abhishek\exploit`. It lives in the
 system tray, lets the user drag files onto a radial wheel (or pick them with a hotkey), and converts
@@ -21,7 +21,7 @@ uploaded; every operation runs on the user's machine.
 
 ## Core User Flow
 
-1. User launches exploit; it sits in the system tray.
+1. User launches FileForge; it sits in the system tray.
 2. User holds Shift while dragging files from Explorer or the
    desktop (or presses Ctrl+Alt+O / uses the tray menu to pick
    files). There is no main window; Settings opens from the tray.

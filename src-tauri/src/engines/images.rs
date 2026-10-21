@@ -9,7 +9,7 @@ use image::metadata::Orientation;
 use image::{DynamicImage, ExtendedColorType, ImageDecoder, ImageFormat, ImageReader, RgbImage, RgbaImage};
 
 use super::{pdf, ConversionEngine, ConversionRequest};
-use crate::error::{ExploitError, Result};
+use crate::error::{ForgeError, Result};
 use crate::ffmpeg::{self, CancelToken, ProgressFn};
 use crate::formats::{FileFormat, FormatCategory};
 
@@ -75,7 +75,7 @@ impl ConversionEngine for ImageEngine {
             }
             FileFormat::Avif => write_avif(&decoded, &request.destination, progress, cancel)?,
             other => {
-                return Err(ExploitError::UnsupportedConversion(
+                return Err(ForgeError::UnsupportedConversion(
                     request.source_format,
                     other,
                 ));
@@ -86,12 +86,12 @@ impl ConversionEngine for ImageEngine {
     }
 }
 
-fn decode_error(error: impl Display) -> ExploitError {
-    ExploitError::InvalidInput(format!("Could not read the image: {error}"))
+fn decode_error(error: impl Display) -> ForgeError {
+    ForgeError::InvalidInput(format!("Could not read the image: {error}"))
 }
 
-fn encode_error(error: impl Display) -> ExploitError {
-    ExploitError::ToolFailed("image encoder".into(), error.to_string())
+fn encode_error(error: impl Display) -> ForgeError {
+    ForgeError::ToolFailed("image encoder".into(), error.to_string())
 }
 
 fn decode(
@@ -125,7 +125,7 @@ fn decode_with_ffmpeg(
     progress: &ProgressFn,
     cancel: &CancelToken,
 ) -> Result<DynamicImage> {
-    let temp = std::env::temp_dir().join(format!("exploit-{}.png", uuid::Uuid::new_v4()));
+    let temp = std::env::temp_dir().join(format!("fileforge-{}.png", uuid::Uuid::new_v4()));
     let args = vec![
         "-i".to_string(),
         source.display().to_string(),
@@ -150,13 +150,13 @@ fn render_svg(source: &Path) -> Result<DynamicImage> {
     let size = tree.size();
     let long_edge = size.width().max(size.height());
     if !(long_edge.is_finite() && long_edge > 0.0) {
-        return Err(ExploitError::InvalidInput("The SVG has no size.".into()));
+        return Err(ForgeError::InvalidInput("The SVG has no size.".into()));
     }
     let scale = (1024.0 / long_edge).clamp(1.0, 64.0);
     let width = (size.width() * scale).ceil().max(1.0) as u32;
     let height = (size.height() * scale).ceil().max(1.0) as u32;
     let mut pixmap = tiny_skia::Pixmap::new(width, height)
-        .ok_or_else(|| ExploitError::InvalidInput("The SVG is too large to render.".into()))?;
+        .ok_or_else(|| ForgeError::InvalidInput("The SVG is too large to render.".into()))?;
     resvg::render(
         &tree,
         tiny_skia::Transform::from_scale(scale, scale),
@@ -169,7 +169,7 @@ fn render_svg(source: &Path) -> Result<DynamicImage> {
         rgba.extend_from_slice(&[color.red(), color.green(), color.blue(), color.alpha()]);
     }
     let image = RgbaImage::from_raw(width, height, rgba)
-        .ok_or_else(|| ExploitError::InvalidInput("Could not rasterise the SVG.".into()))?;
+        .ok_or_else(|| ForgeError::InvalidInput("Could not rasterise the SVG.".into()))?;
     Ok(DynamicImage::ImageRgba8(image))
 }
 
@@ -215,12 +215,12 @@ fn write_avif(
 ) -> Result<()> {
     let encoders = ffmpeg::available_encoders();
     if !encoders.contains("libaom-av1") {
-        return Err(ExploitError::ToolFailed(
+        return Err(ForgeError::ToolFailed(
             "ffmpeg".into(),
             "this FFmpeg build has no AVIF (libaom-av1) encoder".into(),
         ));
     }
-    let temp = std::env::temp_dir().join(format!("exploit-{}.png", uuid::Uuid::new_v4()));
+    let temp = std::env::temp_dir().join(format!("fileforge-{}.png", uuid::Uuid::new_v4()));
     image
         .save_with_format(&temp, ImageFormat::Png)
         .map_err(encode_error)?;

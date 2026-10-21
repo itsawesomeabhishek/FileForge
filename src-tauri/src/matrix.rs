@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn output_path_avoids_collisions() {
-        let dir = std::env::temp_dir().join(format!("exploit-matrix-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("fileforge-matrix-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("song.mp3"), b"x").unwrap();
         let mut reserved = HashSet::new();

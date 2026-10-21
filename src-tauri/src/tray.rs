@@ -19,12 +19,12 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
     let convert = MenuItem::with_id(app, "convert", "Convert Files…", true, Some("Ctrl+Alt+O"))?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let logs = MenuItem::with_id(app, "logs", "Show Logs", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit exploit", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit FileForge", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let menu = Menu::with_items(app, &[&convert, &settings, &logs, &separator, &quit])?;
 
     let mut builder = TrayIconBuilder::with_id("main")
-        .tooltip("exploit")
+        .tooltip("FileForge")
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {

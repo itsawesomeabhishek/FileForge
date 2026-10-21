@@ -1,5 +1,5 @@
 use super::{text, ConversionEngine, ConversionRequest};
-use crate::error::{ExploitError, Result};
+use crate::error::{ForgeError, Result};
 use crate::formats::{FileFormat, FormatCategory};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -205,7 +205,7 @@ impl ConversionEngine for SubtitleEngine {
         let input = text::read(&request.source)?;
         let cues = parse(&input, request.source_format);
         if cues.is_empty() {
-            return Err(ExploitError::InvalidInput(
+            return Err(ForgeError::InvalidInput(
                 "No valid subtitle cues were found.".into(),
             ));
         }

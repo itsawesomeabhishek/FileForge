@@ -4,7 +4,7 @@ use crate::formats::FileFormat;
 
 /// Single error type for all conversion work. Messages are user-readable.
 #[derive(Debug)]
-pub enum ExploitError {
+pub enum ForgeError {
     UnsupportedConversion(FileFormat, FileFormat),
     InvalidInput(String),
     FfmpegMissing(String),
@@ -14,7 +14,7 @@ pub enum ExploitError {
     Cancelled,
 }
 
-impl fmt::Display for ExploitError {
+impl fmt::Display for ForgeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnsupportedConversion(from, to) => write!(
@@ -36,12 +36,12 @@ impl fmt::Display for ExploitError {
     }
 }
 
-impl std::error::Error for ExploitError {}
+impl std::error::Error for ForgeError {}
 
-impl From<std::io::Error> for ExploitError {
+impl From<std::io::Error> for ForgeError {
     fn from(error: std::io::Error) -> Self {
         Self::Io(error.to_string())
     }
 }
 
-pub type Result<T> = std::result::Result<T, ExploitError>;
+pub type Result<T> = std::result::Result<T, ForgeError>;

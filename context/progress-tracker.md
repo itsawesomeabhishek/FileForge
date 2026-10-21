@@ -22,7 +22,7 @@ phases; only the convert wheel exists so far.
 - Environment verified: Node 22, Rust 1.99 MSVC, VS Build
   Tools 2022, WebView2, Tauri 2.12.
 - Context files filled in.
-- Tauri config (`com.abhishek.exploit`, NSIS target, FFmpeg
+- Tauri config (`com.abhishek.fileforge`, NSIS target, FFmpeg
   `externalBin`), plugins, capabilities, `.gitignore`.
 - FFmpeg/ffprobe sidecars fetched by `scripts/fetch-ffmpeg.ps1`
   into `src-tauri/binaries/` (gyan.dev essentials build, GPL).
@@ -32,7 +32,7 @@ phases; only the convert wheel exists so far.
   close-to-tray, `--minimized` login launch.
 - React UI: drop zone and picker, file list, target chips, job
   list, Settings.
-- Installer built: `exploit_0.1.0_x64-setup.exe` (56.7 MiB).
+- Installer built: `FileForge_0.1.0_x64-setup.exe` (56.7 MiB).
 
 ### Wheel Phase 1 (this change)
 
@@ -77,7 +77,7 @@ phases; only the convert wheel exists so far.
     wedge cancels, mouse hover highlights.
 - Settings: `wheelEnabled` toggle and `excludedApps` list
   (normalised to lower-case exe names).
-- Tray: "Open exploit", "Convert Files…" (Ctrl+Alt+O), Settings,
+- Tray: "Open FileForge", "Convert Files…" (Ctrl+Alt+O), Settings,
   Show Logs, Quit.
 - Removed the Convert window (drop zone, file list, target chips,
   job list) and its dead CSS and API wrappers. The main window is
@@ -100,6 +100,18 @@ phases; only the convert wheel exists so far.
     focused picker wheel; real Right, Right, Enter keys convert to
     WEBP.
   - Hit testing checked for all six wedges of a 6-item wheel.
+- Renamed the project to **FileForge** (was "exploit" / `rust_tool`):
+  - Product name, window titles, tray text, installer name
+    (`FileForge_0.1.0_x64-setup.exe`), and the app identifier
+    (`com.abhishek.fileforge`).
+  - Crate `fileforge`, library `fileforge_lib`, npm package
+    `fileforge`, error enum `ForgeError`, temp prefix
+    `.fileforge-`, log file `fileforge.log`.
+  - The identifier decides the config/log folders, so settings
+    saved by an older build under `com.abhishek.exploit` are not
+    carried over.
+  - References to the macOS source app `exploit` are unchanged.
+  - `cargo test` (70) and `npm run build` pass.
 
 ## In Progress
 

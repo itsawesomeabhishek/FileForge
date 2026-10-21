@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "exploit",
+  "productName": "FileForge",
   "version": "0.1.0",
-  "identifier": "com.abhishek.exploit",
+  "identifier": "com.abhishek.fileforge",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "exploit settings",
+        "title": "FileForge settings",
         "visible": false,
         "width": 560,
         "height": 720,

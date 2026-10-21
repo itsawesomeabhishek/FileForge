@@ -6,7 +6,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 // loads its own styles, so the overlay stays fully transparent.
 async function mount() {
   const isWheel = getCurrentWebviewWindow().label === "wheel";
-  if (isWheel) document.title = "exploit-wheel";
+  if (isWheel) document.title = "fileforge-wheel";
   const View = isWheel
     ? (await import("./WheelApp")).default
     : (await import("./App")).default;

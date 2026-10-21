@@ -15,7 +15,7 @@ if ((Test-Path $ffmpegOut) -and (Test-Path $ffprobeOut)) {
 }
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
-$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("exploit-ffmpeg-" + [guid]::NewGuid())
+$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("fileforge-ffmpeg-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
 try {

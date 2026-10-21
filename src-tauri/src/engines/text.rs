@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::error::{ExploitError, Result};
+use crate::error::{ForgeError, Result};
 
 /// Windows-1252 characters for bytes 0x80-0x9F (0 marks an undefined byte).
 const CP1252_HIGH: [u16; 32] = [
@@ -54,7 +54,7 @@ pub fn decode(bytes: &[u8]) -> String {
 
 pub fn read(path: &Path) -> Result<String> {
     let bytes = std::fs::read(path).map_err(|error| {
-        ExploitError::InvalidInput(format!("Could not read {}: {error}", path.display()))
+        ForgeError::InvalidInput(format!("Could not read {}: {error}", path.display()))
     })?;
     Ok(decode(&bytes))
 }

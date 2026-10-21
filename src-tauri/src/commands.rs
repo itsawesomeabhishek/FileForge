@@ -147,7 +147,7 @@ pub async fn ffmpeg_health() -> Health {
 pub fn open_output(path: String, queue: State<'_, JobQueue>) -> Result<(), String> {
     let path = PathBuf::from(path);
     if !queue.is_known_output(&path) {
-        return Err("That file was not created by exploit.".into());
+        return Err("That file was not created by FileForge.".into());
     }
     tauri_plugin_opener::open_path(path, None::<&str>).map_err(|e| e.to_string())
 }
@@ -157,7 +157,7 @@ pub fn open_output(path: String, queue: State<'_, JobQueue>) -> Result<(), Strin
 pub fn reveal_output(path: String, queue: State<'_, JobQueue>) -> Result<(), String> {
     let path = PathBuf::from(path);
     if !queue.is_known_output(&path) {
-        return Err("That file was not created by exploit.".into());
+        return Err("That file was not created by FileForge.".into());
     }
     tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| e.to_string())
 }
