@@ -145,13 +145,12 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
-- Drops were missing the wedge. The overlay is full-monitor
-  before the drag moves, the page and the drop share one pixel
-  scale, a drop that arrives before the wedge list is kept, and
-  the window stays up for a second after mouse-up. The FFmpeg
-  encoder list is cached so image wedges are not waiting on a
-  process start. A finished job is logged only when the new file
-  is actually on disk.
+- Release 0.1.5: a drop stays on the wedge it was aimed at. The
+  overlay covers the monitor before the drag moves, the page and
+  the drop share one pixel scale, an early drop is kept until the
+  wedges are listed, and the window stays up for a second after
+  mouse-up. The FFmpeg encoder list is cached. A job is marked
+  done only when the new file is on disk.
 - Release 0.1.3: Ctrl tools, hover tick, Markdown, HTML, CSV,
   TSV, PDF text, and ZIP, TAR, and GZIP.
 
