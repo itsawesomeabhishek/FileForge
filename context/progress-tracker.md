@@ -112,6 +112,13 @@ phases; only the convert wheel exists so far.
     carried over.
   - References to the macOS source app `exploit` are unchanged.
   - `cargo test` (70) and `npm run build` pass.
+- Version 0.1.1: the idle-memory window lifecycle above.
+- Idle memory: the settings window is not created until Settings
+  is opened, and closing it destroys the webview. The wheel is
+  created on the first Shift-drag or Ctrl+Alt+O and destroyed
+  1.5s after it hides, so WebView2 is not resident in the tray.
+  Closing either window does not quit the app. The first wheel
+  after idle waits for WebView2 to start.
 - README rewritten as a usage walkthrough (install, Shift-drag,
   drop, naming, picker keys, settings, format table). Image and
   video slots are HTML comments pointing at `docs/media/`, so the

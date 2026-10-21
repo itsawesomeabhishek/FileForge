@@ -1,6 +1,6 @@
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, WebviewWindowBuilder};
 
 use crate::commands;
 use crate::diag;
@@ -8,10 +8,37 @@ use crate::picker;
 use crate::wheel::Mode;
 
 pub fn show_main(app: &AppHandle) {
+    let app = app.clone();
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == "main")
+        .cloned();
+    let handle = app.clone();
+    if let Err(error) = app.run_on_main_thread(move || open_settings(&handle, config.as_ref())) {
+        diag::log(&format!("settings: {error}"));
+    }
+}
+
+fn open_settings(app: &AppHandle, config: Option<&tauri::utils::config::WindowConfig>) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        return;
+    }
+    let Some(config) = config else {
+        diag::log("settings: window config is missing");
+        return;
+    };
+    match WebviewWindowBuilder::from_config(app, config).and_then(|builder| builder.build()) {
+        Ok(window) => {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+        Err(error) => diag::log(&format!("settings: {error}")),
     }
 }
 

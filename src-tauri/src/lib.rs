@@ -12,7 +12,7 @@ mod settings;
 mod tray;
 mod wheel;
 
-use tauri::{Manager, WindowEvent};
+use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,26 +36,9 @@ pub fn run() {
             app.manage(settings::SettingsStore::load(config_dir.join("settings.json")));
             app.manage(jobs::JobQueue::start(app.handle().clone()));
             tray::install(app.handle())?;
-            wheel::create(app.handle())?;
             picker::register_shortcuts(app.handle());
             dragmon::start(app.handle().clone());
-
-            // Login launches stay quietly in the tray.
-            if std::env::args().any(|arg| arg == "--minimized") {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
-                }
-            }
             Ok(())
-        })
-        .on_window_event(|window, event| {
-            // Closing the window keeps the app alive in the tray.
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
-            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::probe_files,
@@ -75,6 +58,15 @@ pub fn run() {
             commands::wheel_hide,
             commands::show_logs,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building FileForge")
+        .run(|_app, event| {
+            // Closing Settings or the wheel must not quit the tray app.
+            // Quit FileForge calls exit(), which sets an exit code.
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
+                if code.is_none() {
+                    api.prevent_exit();
+                }
+            }
+        });
 }

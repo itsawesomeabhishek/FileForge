@@ -6,6 +6,10 @@ desktop, and a wheel of formats appears under the cursor. Drop the file
 on a wedge and the new file is written next to the original.
 
 Nothing is uploaded. The original is never changed, moved, or overwritten.
+The wheel and the settings window are created when you open them and
+closed when you are done, so FileForge does not keep a browser engine
+running in the tray. The first drag after the app has been idle waits
+a moment while that window starts.
 
 <!-- Demo video.
      Drop a short screen recording on this README in GitHub (it becomes a
@@ -17,7 +21,7 @@ Nothing is uploaded. The original is never changed, moved, or overwritten.
 ## Install
 
 1. Download
-   [`FileForge_0.1.0_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
+   [`FileForge_0.1.1_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
    and run it.
 2. You need Windows 10 or 11, 64-bit. WebView2 is already on current
    Windows 11.

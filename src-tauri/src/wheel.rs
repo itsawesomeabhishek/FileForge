@@ -6,7 +6,8 @@
 //! (and is cancelled) instead of falling through to the app underneath,
 //! like the full-screen panel on macOS. The React side draws the wheel.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{
@@ -45,6 +46,12 @@ struct ShowPayload {
 }
 
 static VISIBLE: AtomicBool = AtomicBool::new(false);
+/// Bumped on every show and hide so a late create or destroy cannot
+/// revive a window the user has already dismissed.
+static GENERATION: AtomicU64 = AtomicU64::new(0);
+/// How long the hidden wheel stays allocated so an in-flight drop can
+/// still reach the page. Then the webview is destroyed and WebView2 exits.
+const RELEASE_AFTER: Duration = Duration::from_millis(1500);
 
 pub fn is_visible() -> bool {
     VISIBLE.load(Ordering::SeqCst)
@@ -91,7 +98,46 @@ pub fn clamp_center(x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
 }
 
 /// Shows the wheel over the monitor containing `cursor` (physical pixels).
+///
+/// The overlay is created on demand and destroyed after it closes, so
+/// WebView2 is not resident while FileForge sits in the tray. The first
+/// show after idle waits for that startup.
 pub fn show(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths: Vec<String>) {
+    let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    if window(app).is_some() {
+        present(app, mode, cursor, picker, paths);
+        return;
+    }
+
+    let handle = app.clone();
+    if let Err(error) = app.run_on_main_thread(move || {
+        if GENERATION.load(Ordering::SeqCst) != generation {
+            return;
+        }
+        if window(&handle).is_none() {
+            if let Err(error) = create(&handle) {
+                diag::log(&format!("wheel: create failed: {error}"));
+                return;
+            }
+        }
+        if GENERATION.load(Ordering::SeqCst) != generation {
+            if let Some(window) = window(&handle) {
+                let _ = window.destroy();
+            }
+            return;
+        }
+        let cursor = if picker {
+            cursor
+        } else {
+            crate::dragmon::cursor_position().unwrap_or(cursor)
+        };
+        present(&handle, mode, cursor, picker, paths);
+    }) {
+        diag::log(&format!("wheel: {error}"));
+    }
+}
+
+fn present(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths: Vec<String>) {
     let Some(window) = window(app) else {
         diag::log("wheel: overlay window is missing");
         return;
@@ -157,12 +203,30 @@ pub fn set_mode(app: &AppHandle, mode: Mode) {
 }
 
 pub fn hide(app: &AppHandle) {
+    let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     if let Some(window) = window(app) {
         let _ = window.emit("wheel-hide", ());
         let _ = window.hide();
         let _ = window.set_focusable(false);
     }
     VISIBLE.store(false, Ordering::SeqCst);
+
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(RELEASE_AFTER);
+        if GENERATION.load(Ordering::SeqCst) != generation {
+            return;
+        }
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if GENERATION.load(Ordering::SeqCst) != generation {
+                return;
+            }
+            if let Some(window) = window(&handle) {
+                let _ = window.destroy();
+            }
+        });
+    });
 }
 
 #[cfg(test)]

@@ -28,8 +28,13 @@
 - `src-tauri/src/dragmon.rs` - low-level mouse hook plus a
   controller thread; decides when a modifier-drag from Explorer or
   the desktop should open the wheel.
-- `src-tauri/src/wheel.rs` - the hidden full-monitor overlay window
-  and its show/hide/mode events.
+- `src-tauri/src/wheel.rs` - the full-monitor overlay window
+  and its show/hide/mode events. It is created on demand and
+  destroyed after it closes, so WebView2 is not kept in memory
+  while the app is idle in the tray. The settings window is
+  created the same way, the first time Settings is opened, and
+  closing it destroys it. The process stays running because a
+  window close does not exit the tray app.
 - `src-tauri/src/picker.rs` - menu/hotkey entry: file dialog, then
   the wheel in picker mode; global shortcut registration.
 - `src/` - React UI. Calls Tauri commands, listens to events.
