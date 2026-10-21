@@ -5,7 +5,7 @@
 exploit is a local, offline file converter and file-tool
 app. This repository is the Windows port of the macOS
 SwiftUI app at `C:\Users\Abhishek\exploit`. It lives in the
-system tray, lets the user pick or drop files, and converts
+system tray, lets the user drag files onto a radial wheel (or pick them with a hotkey), and converts
 them between image, audio, video, subtitle, and text formats
 using a bundled FFmpeg and native Rust codecs. Nothing is
 uploaded; every operation runs on the user's machine.
@@ -22,14 +22,13 @@ uploaded; every operation runs on the user's machine.
 ## Core User Flow
 
 1. User launches exploit; it sits in the system tray.
-2. User picks files from the tray menu or drops them on the
-   window.
-3. App detects each file's format and lists the targets common
-   to all selected files.
-4. User picks a target format and starts the conversion.
-5. Jobs run one at a time with live progress; the user can
-   cancel.
-6. Finished outputs can be opened or shown in Explorer.
+2. User holds Shift while dragging files from Explorer or the
+   desktop (or presses Ctrl+Alt+O / uses the tray menu to pick
+   files). There is no main window; Settings opens from the tray.
+3. A radial wheel lists the targets common to all the files.
+4. Dropping on a wedge starts the conversion.
+5. Jobs run one at a time; the output appears next to the
+   original and can be shown in Explorer.
 
 ## Features
 

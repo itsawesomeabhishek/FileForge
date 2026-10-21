@@ -46,11 +46,10 @@ stylesheet `src/App.css`. Keep components small and in
 
 ## Layout Patterns
 
-- Main window: header, drop zone, file list, target picker,
-  job list stacked vertically; ~560x640 default.
-- Settings: separate tab inside the same window.
-- Progress: linear bar per job with status text and
-  Open / Show actions when done.
+- There is no convert window. The only regular window is
+  Settings (hidden until opened from the tray); conversions are
+  driven entirely by the radial wheel.
+- Progress: a pill/card near the screen edge (planned).
 
 ## Radial Wheel (overlay window)
 

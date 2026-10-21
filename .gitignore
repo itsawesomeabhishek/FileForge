@@ -46,3 +46,6 @@ src-tauri/binaries/
 
 # Built installers
 release/
+
+# Local agent tooling config
+.mcp.json

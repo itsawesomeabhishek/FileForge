@@ -87,29 +87,6 @@ h2 {
   color: var(--accent-primary);
 }
 
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-}
-
-.tab {
-  padding: 4px 14px;
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.tab.is-active {
-  background: var(--accent-primary);
-  color: var(--accent-text);
-}
-
 .app-main {
   flex: 1;
   display: flex;
@@ -143,153 +120,6 @@ h2 {
   color: var(--state-error);
 }
 
-/* Drop zone */
-.drop-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 28px 16px;
-  background: var(--bg-surface);
-  border: 2px dashed var(--border-default);
-  border-radius: var(--radius-card);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
-}
-
-.drop-zone:hover,
-.drop-zone.is-hovering {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-  background: var(--bg-hover);
-}
-
-.drop-title {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.drop-hint {
-  font-size: 12px;
-}
-
-/* File list */
-.file-list,
-.job-list {
-  list-style: none;
-  margin: 0;
-  padding: 4px;
-}
-
-.file-row,
-.job-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-}
-
-.file-row + .file-row,
-.job-row + .job-row {
-  border-top: 1px solid var(--border-default);
-}
-
-.file-icon,
-.status {
-  display: inline-flex;
-  color: var(--accent-primary);
-}
-
-.file-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.badge {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--bg-hover);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.badge-error {
-  color: var(--state-error);
-}
-
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.icon-button:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-/* Section headers */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.section-header h2 {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.convert-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Target chips */
-.targets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  padding: 6px 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.chip:hover {
-  background: var(--bg-hover);
-}
-
-.chip.is-selected {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: var(--accent-text);
-}
-
 /* Buttons */
 .button {
   padding: 7px 16px;
@@ -320,13 +150,6 @@ h2 {
   filter: brightness(1.08);
 }
 
-.link-button {
-  background: transparent;
-  border: 0;
-  color: var(--accent-primary);
-  cursor: pointer;
-}
-
 .row {
   display: flex;
   align-items: center;
@@ -340,64 +163,6 @@ h2 {
 .grow {
   flex: 1;
   min-width: 0;
-}
-
-/* Jobs */
-.jobs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.job-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.job-title {
-  font-weight: 600;
-}
-
-.job-detail {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.job-detail.is-error {
-  color: var(--state-error);
-}
-
-.job-actions {
-  display: flex;
-  gap: 2px;
-}
-
-.status-success {
-  color: var(--state-success);
-}
-
-.status-error {
-  color: var(--state-error);
-}
-
-.progress {
-  height: 4px;
-  margin-top: 3px;
-  background: var(--bg-hover);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent-primary);
-  transition: width 0.2s ease;
 }
 
 /* Settings */

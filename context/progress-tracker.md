@@ -79,6 +79,11 @@ phases; only the convert wheel exists so far.
   (normalised to lower-case exe names).
 - Tray: "Open exploit", "Convert Files…" (Ctrl+Alt+O), Settings,
   Show Logs, Quit.
+- Removed the Convert window (drop zone, file list, target chips,
+  job list) and its dead CSS and API wrappers. The main window is
+  now Settings only, hidden at startup, opened from the tray;
+  tray left-click opens the menu. Rust job commands remain for the
+  upcoming progress pill.
 - Dev helpers: `scripts/sim-drag.ps1` performs a real Explorer
   drag with modifiers held (refuses to press the mouse unless an
   Explorer window is under the file); `scripts/cdp-eval.mjs` gained

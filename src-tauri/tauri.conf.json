@@ -13,7 +13,8 @@
     "windows": [
       {
         "label": "main",
-        "title": "exploit",
+        "title": "exploit settings",
+        "visible": false,
         "width": 560,
         "height": 720,
         "minWidth": 480,
