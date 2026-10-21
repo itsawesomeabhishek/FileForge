@@ -39,13 +39,23 @@ pub enum Mode {
 #[serde(rename_all = "camelCase")]
 struct ShowPayload {
     mode: Mode,
-    /// Wheel centre in CSS pixels, relative to the overlay window.
+    /// Cursor and monitor size in physical pixels, relative to the overlay.
+    /// The page divides by its own scale so the wheel and the drop match.
     x: f64,
     y: f64,
+    width: f64,
+    height: f64,
     /// True when opened from the menu/hotkey (mouse and keyboard driven)
     /// rather than by an active drag.
     picker: bool,
     paths: Vec<String>,
+}
+
+struct MonitorBox {
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
 }
 
 static VISIBLE: AtomicBool = AtomicBool::new(false);
@@ -111,8 +121,73 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .visible(true)
         .build()?;
     let _ = window.hide();
+    // Parked on the primary monitor at its real size while hidden, so the
+    // first show does not resize the drop target under the cursor.
+    if let Some(monitor) = primary_monitor(app) {
+        place(&window, &monitor);
+    }
     READY.store(true, Ordering::SeqCst);
     Ok(())
+}
+
+fn primary_monitor(app: &AppHandle) -> Option<MonitorBox> {
+    let monitor = app.primary_monitor().ok().flatten()?;
+    let pos = *monitor.position();
+    let size = *monitor.size();
+    Some(MonitorBox {
+        x: pos.x,
+        y: pos.y,
+        width: size.width,
+        height: size.height,
+    })
+}
+
+fn monitor_at(app: &AppHandle, cursor: (i32, i32)) -> Option<MonitorBox> {
+    let found = app.available_monitors().ok().and_then(|monitors| {
+        monitors.into_iter().find(|monitor| {
+            let pos = monitor.position();
+            let size = monitor.size();
+            cursor.0 >= pos.x
+                && cursor.0 < pos.x + size.width as i32
+                && cursor.1 >= pos.y
+                && cursor.1 < pos.y + size.height as i32
+        })
+    });
+    let monitor = found.or_else(|| app.primary_monitor().ok().flatten())?;
+    let pos = *monitor.position();
+    let size = *monitor.size();
+    Some(MonitorBox {
+        x: pos.x,
+        y: pos.y,
+        width: size.width,
+        height: size.height,
+    })
+}
+
+fn place(window: &WebviewWindow, monitor: &MonitorBox) {
+    let _ = window.set_position(PhysicalPosition::new(monitor.x, monitor.y));
+    let _ = window.set_size(PhysicalSize::new(monitor.width, monitor.height));
+}
+
+/// Sizes the hidden overlay to the monitor under the cursor as soon as the
+/// button goes down. The progress card uses a small window; leaving it that
+/// size made the next drop's coordinates miss every wedge.
+pub fn prepare_for_drag(app: &AppHandle, cursor: (i32, i32)) {
+    if VISIBLE.load(Ordering::SeqCst) && !PILL.load(Ordering::SeqCst) {
+        return;
+    }
+    let Some(window) = window(app) else {
+        prepare(app);
+        return;
+    };
+    if PILL.swap(false, Ordering::SeqCst) {
+        let _ = window.emit("wheel-hide", ());
+        let _ = window.hide();
+        VISIBLE.store(false, Ordering::SeqCst);
+    }
+    if let Some(monitor) = monitor_at(app, cursor) {
+        place(&window, &monitor);
+    }
 }
 
 fn window(app: &AppHandle) -> Option<WebviewWindow> {
@@ -230,47 +305,25 @@ fn present(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths:
         diag::log("wheel: overlay window is missing");
         return;
     };
-    let monitor = app
-        .available_monitors()
-        .ok()
-        .and_then(|monitors| {
-            monitors.into_iter().find(|monitor| {
-                let pos = monitor.position();
-                let size = monitor.size();
-                cursor.0 >= pos.x
-                    && cursor.0 < pos.x + size.width as i32
-                    && cursor.1 >= pos.y
-                    && cursor.1 < pos.y + size.height as i32
-            })
-        })
-        .or_else(|| app.primary_monitor().ok().flatten());
-    let Some(monitor) = monitor else {
+    let Some(monitor) = monitor_at(app, cursor) else {
         diag::log("wheel: no monitor found for the cursor");
         return;
     };
 
-    let scale = monitor.scale_factor();
-    let pos = *monitor.position();
-    let size = *monitor.size();
-    let (cx, cy) = clamp_center(
-        (cursor.0 - pos.x) as f64 / scale,
-        (cursor.1 - pos.y) as f64 / scale,
-        size.width as f64 / scale,
-        size.height as f64 / scale,
-    );
-
     let _ = window.set_ignore_cursor_events(false);
     let _ = window.set_focusable(picker);
-    let _ = window.set_position(PhysicalPosition::new(pos.x, pos.y));
-    let _ = window.set_size(PhysicalSize::new(size.width, size.height));
+    place(&window, &monitor);
     let _ = window.set_always_on_top(true);
-    // Tell the page first so it can reset before it becomes visible.
+    // Physical pixels. The page converts them with the webview scale and
+    // clamps the disc on screen, so a drop uses the same point as the wedge.
     let _ = window.emit(
         "wheel-show",
         ShowPayload {
             mode,
-            x: cx,
-            y: cy,
+            x: (cursor.0 - monitor.x) as f64,
+            y: (cursor.1 - monitor.y) as f64,
+            width: monitor.width as f64,
+            height: monitor.height as f64,
             picker,
             paths,
         },

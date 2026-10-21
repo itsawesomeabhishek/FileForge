@@ -145,9 +145,13 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
-- Release 0.1.4: the Done card hides itself, the wheel starts
-  loading at launch so the first drag can open, and the hover
-  tick is a soft click.
+- Drops were missing the wedge. The overlay is full-monitor
+  before the drag moves, the page and the drop share one pixel
+  scale, a drop that arrives before the wedge list is kept, and
+  the window stays up for a second after mouse-up. The FFmpeg
+  encoder list is cached so image wedges are not waiting on a
+  process start. A finished job is logged only when the new file
+  is actually on disk.
 - Release 0.1.3: Ctrl tools, hover tick, Markdown, HTML, CSV,
   TSV, PDF text, and ZIP, TAR, and GZIP.
 

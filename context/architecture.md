@@ -18,7 +18,8 @@
 - `src-tauri/src/matrix.rs` - which target formats each source
   offers; output file naming and unique-name helpers.
 - `src-tauri/src/ffmpeg.rs` - locates the sidecar, health check,
-  duration probe, encoder list, streaming progress runner.
+  duration probe, encoder list (cached for the session), streaming
+  progress runner.
 - `src-tauri/src/engines/` - one module per engine plus a
   registry that picks the first engine supporting a pair.
 - `src-tauri/src/jobs.rs` - serial job queue, status, progress
@@ -32,14 +33,16 @@
   leave the original. Once open, the wheel stays until the mouse
   button is released.
 - `src-tauri/src/wheel.rs` - the full-monitor overlay window
-  and its show/hide/mode events. Loading starts at mouse-down,
-  before the drag threshold, so the first drop has a window to
-  land on. After the wheel closes, the same window shrinks into
-  a progress card until the conversion finishes. It is destroyed
-  after a few idle minutes. The settings window is created the
-  first time Settings is opened, and closing it destroys it.
-  The process stays running because a window close does not
-  exit the tray app.
+  and its show/hide/mode events. The window is parked on the
+  monitor at full size while hidden, including at mouse-down,
+  so a drop's physical coordinates match the wheel. The page
+  converts those pixels with the webview scale. After the wheel
+  closes, the same window shrinks into a progress card until
+  the conversion finishes, then returns to full size on the next
+  press. It is destroyed after a few idle minutes. The settings
+  window is created the first time Settings is opened, and
+  closing it destroys it. The process stays running because a
+  window close does not exit the tray app.
 - `src-tauri/src/picker.rs` - menu/hotkey entry: file dialog, then
   the wheel in picker mode; global shortcut registration.
 - `src/` - React UI. Calls Tauri commands, listens to events.

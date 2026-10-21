@@ -3,6 +3,17 @@
 // a point at (radius, angle) is (cos a * radius, -sin a * radius).
 
 export const DISC_RADIUS = 170;
+/** Matches `EDGE_MARGIN` in `wheel.rs`. Keeps the disc on screen. */
+export const EDGE_MARGIN = DISC_RADIUS + 8;
+
+/** Same clamp as the Rust overlay: pull the centre in from the edges. */
+export function clampCenter(x: number, y: number, width: number, height: number): Point {
+  const clamp = (value: number, extent: number) => {
+    if (extent <= EDGE_MARGIN * 2) return extent / 2;
+    return Math.min(extent - EDGE_MARGIN, Math.max(EDGE_MARGIN, value));
+  };
+  return { x: clamp(x, width), y: clamp(y, height) };
+}
 
 export interface Point {
   x: number;

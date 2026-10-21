@@ -111,9 +111,11 @@ export type WheelMode = "convert" | "tools" | "actions";
 
 export interface WheelShow {
   mode: WheelMode;
-  /** Wheel centre in CSS pixels relative to the overlay window. */
+  /** Cursor and monitor size in physical pixels, relative to the overlay. */
   x: number;
   y: number;
+  width: number;
+  height: number;
   /** Opened from the menu/hotkey rather than by a drag. */
   picker: boolean;
   paths: string[];

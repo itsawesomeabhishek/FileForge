@@ -46,7 +46,9 @@ use crate::wheel::{self, Mode};
 const DRAG_THRESHOLD: i32 = 24;
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
 /// How long the wheel lingers after release so the drop can be delivered.
-const RELEASE_GRACE: Duration = Duration::from_millis(350);
+/// The overlay stays up after mouse-up so WebView2 can deliver the drop.
+/// A shorter grace hid the window first, and the drop never reached a wedge.
+const RELEASE_GRACE: Duration = Duration::from_millis(1000);
 
 /// Modes whose wheel has content. Tools and file actions are added to this
 /// list as those phases land.
@@ -326,9 +328,9 @@ fn on_event(app: &AppHandle, state: State, event: MouseEvent) -> State {
                 return State::Idle;
             }
             if allowed_source((x, y)) {
-                // Build the overlay now, before the pointer has moved far
-                // enough to count as a drag, so the first drop can land on it.
-                wheel::prepare(app);
+                // Size the overlay to this monitor before the pointer moves,
+                // so the drop target and the wheel use the same coordinates.
+                wheel::prepare_for_drag(app, (x, y));
                 State::Candidate { start: (x, y) }
             } else {
                 State::Idle

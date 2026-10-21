@@ -49,6 +49,9 @@ pub fn set_configured_path(path: &str) {
     if let Ok(mut guard) = CONFIGURED_PATH.write() {
         *guard = path.trim().to_string();
     }
+    if let Ok(mut guard) = ENCODERS.write() {
+        *guard = None;
+    }
 }
 
 fn configured_path() -> String {
@@ -179,8 +182,28 @@ pub fn check_health() -> Health {
     }
 }
 
+/// `ffmpeg -encoders` is a full process start. Image wheels ask for it on
+/// every drag because AVIF is in the candidate list, so the result is kept
+/// until the configured FFmpeg path changes.
+static ENCODERS: std::sync::RwLock<Option<HashSet<String>>> = std::sync::RwLock::new(None);
+
 /// Encoder names reported by `ffmpeg -encoders`.
 pub fn available_encoders() -> HashSet<String> {
+    if let Ok(guard) = ENCODERS.read() {
+        if let Some(cached) = guard.as_ref() {
+            return cached.clone();
+        }
+    }
+    let loaded = query_encoders();
+    if !loaded.is_empty() {
+        if let Ok(mut guard) = ENCODERS.write() {
+            *guard = Some(loaded.clone());
+        }
+    }
+    loaded
+}
+
+fn query_encoders() -> HashSet<String> {
     let Some(ffmpeg) = ffmpeg_path() else {
         return HashSet::new();
     };

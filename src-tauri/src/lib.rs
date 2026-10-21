@@ -56,6 +56,9 @@ pub fn run() {
             // WebView2 has to exist before the first drop, or that drag
             // finishes while the overlay is still starting.
             wheel::prepare(app.handle());
+            // The first image wheel asks which encoders exist. Do that
+            // before the drag so the wedges are already listed.
+            std::thread::spawn(ffmpeg::available_encoders);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

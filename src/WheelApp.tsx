@@ -21,7 +21,7 @@ import {
 } from "./api";
 import { CategoryIcon } from "./components/icons";
 import { playHighlight } from "./highlightSound";
-import { DISC_RADIUS, RadialGeometry, type Point } from "./radial";
+import { DISC_RADIUS, RadialGeometry, clampCenter, type Point } from "./radial";
 import "./wheel.css";
 
 interface Session {
@@ -92,7 +92,11 @@ function emptyMessage(
   mode: WheelMode,
   count: number,
   unsupported: boolean,
+  loading: boolean,
 ): { message: string; detail: string } {
+  if (loading) {
+    return { message: "Reading this file", detail: "The choices appear in a moment" };
+  }
   if (count === 0) {
     return {
       message: mode === "tools" ? "Drop here for tools" : "Drop here to convert",
@@ -106,6 +110,11 @@ function emptyMessage(
     message: count > 1 ? "No shared conversion for these files" : "No conversions available",
     detail: "",
   };
+}
+
+function centerFor(show: WheelShow): Point {
+  const scale = window.devicePixelRatio || 1;
+  return clampCenter(show.x / scale, show.y / scale, show.width / scale, show.height / scale);
 }
 
 function ProgressCard({ jobs }: { jobs: JobInfo[] }) {
@@ -149,12 +158,15 @@ export default function WheelApp() {
   const [paths, setPaths] = useState<string[]>([]);
   const [files, setFiles] = useState<FileInfo[] | null>(null);
   const [targets, setTargets] = useState<TargetInfo[]>([]);
+  const [targetsReady, setTargetsReady] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
   const [epoch, setEpoch] = useState(0);
   const [jobs, setJobs] = useState<JobInfo[]>([]);
   const [pill, setPill] = useState(false);
   const pointer = useRef<Point | null>(null);
   const hoverRef = useRef<number | null>(null);
+  const hideGen = useRef(0);
+  const pendingDrop = useRef<{ paths: string[]; x: number; y: number } | null>(null);
   hoverRef.current = hover;
 
   const reset = useCallback(() => {
@@ -162,8 +174,10 @@ export default function WheelApp() {
     setPaths([]);
     setFiles(null);
     setTargets([]);
+    setTargetsReady(false);
     setHover(null);
     pointer.current = null;
+    pendingDrop.current = null;
   }, []);
 
   const toolItems = toolsFor(files, paths.length);
@@ -192,14 +206,29 @@ export default function WheelApp() {
   }, [paths]);
 
   useEffect(() => {
-    if (files === null || unsupported || convertible.length === 0) {
+    if (files === null) {
       setTargets([]);
+      setTargetsReady(false);
+      return;
+    }
+    if (unsupported || convertible.length === 0) {
+      setTargets([]);
+      setTargetsReady(true);
       return;
     }
     let stale = false;
+    setTargetsReady(false);
     availableTargets(convertible.map((file) => file.format as string))
-      .then((result) => !stale && setTargets(result))
-      .catch(() => !stale && setTargets([]));
+      .then((result) => {
+        if (stale) return;
+        setTargets(result);
+        setTargetsReady(true);
+      })
+      .catch(() => {
+        if (stale) return;
+        setTargets([]);
+        setTargetsReady(true);
+      });
     return () => {
       stale = true;
     };
@@ -244,14 +273,28 @@ export default function WheelApp() {
   );
 
   // Latest-state handle for the long-lived drag subscription.
-  const live = useRef({ session, geometry, choose, hitTest });
-  live.current = { session, geometry, choose, hitTest };
+  const live = useRef({ session, geometry, choose, hitTest, files, targetsReady, paths });
+  live.current = { session, geometry, choose, hitTest, files, targetsReady, paths };
+
+  useEffect(() => {
+    const drop = pendingDrop.current;
+    if (!drop || !session || files === null) return;
+    if (session.mode !== "tools" && !targetsReady) return;
+    pendingDrop.current = null;
+    const index = geometry.index({ x: drop.x - session.center.x, y: drop.y - session.center.y });
+    choose(index, drop.paths);
+  }, [files, targetsReady, session, geometry, choose]);
 
   useListener(() =>
     onWheelShow((show: WheelShow) => {
       trace("show", show);
+      hideGen.current += 1;
+      pendingDrop.current = null;
       setPill(false);
-      setSession({ mode: show.mode, center: { x: show.x, y: show.y }, picker: show.picker });
+      setFiles(null);
+      setTargets([]);
+      setTargetsReady(false);
+      setSession({ mode: show.mode, center: centerFor(show), picker: show.picker });
       setPaths(show.paths);
       setHover(null);
       setEpoch((value) => value + 1);
@@ -266,8 +309,12 @@ export default function WheelApp() {
   useListener(() =>
     onWheelHide(() => {
       trace("hide");
-      reset();
       setPill(false);
+      const generation = ++hideGen.current;
+      window.setTimeout(() => {
+        if (hideGen.current !== generation || pendingDrop.current) return;
+        reset();
+      }, 1000);
     }),
   );
   useListener(() => onWheelPill(() => setPill(true)));
@@ -289,11 +336,20 @@ export default function WheelApp() {
       },
       onDrop: (dropped, x, y) => {
         trace("drop", { dropped, x, y });
-        const { session: current, geometry: shape, choose: pick } = live.current;
-        const index = current
-          ? shape.index({ x: x - current.center.x, y: y - current.center.y })
-          : null;
-        pick(index, dropped);
+        const current = live.current;
+        if (!current.session) return;
+        const waiting =
+          current.files === null || (current.session.mode !== "tools" && !current.targetsReady);
+        if (waiting) {
+          pendingDrop.current = { paths: dropped, x, y };
+          if (current.paths.length === 0) setPaths(dropped);
+          return;
+        }
+        const index = current.geometry.index({
+          x: x - current.session.center.x,
+          y: y - current.session.center.y,
+        });
+        current.choose(index, dropped);
       },
     }),
   );
@@ -322,7 +378,8 @@ export default function WheelApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, [session?.picker, items.length, choose, finish]);
 
-  const empty = emptyMessage(session?.mode ?? "convert", paths.length, unsupported);
+  const loading = paths.length > 0 && (files === null || (session?.mode !== "tools" && !targetsReady));
+  const empty = emptyMessage(session?.mode ?? "convert", paths.length, unsupported, loading);
   const detail =
     paths.length === 0
       ? empty.detail
@@ -349,6 +406,11 @@ export default function WheelApp() {
       onPointerDown={(event) => {
         if (!session?.picker) return;
         const point = { x: event.clientX, y: event.clientY };
+        const waiting = files === null || (session.mode !== "tools" && !targetsReady);
+        if (waiting) {
+          pendingDrop.current = { paths, x: point.x, y: point.y };
+          return;
+        }
         const index = geometry.index({
           x: point.x - session.center.x,
           y: point.y - session.center.y,

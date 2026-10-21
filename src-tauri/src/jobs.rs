@@ -403,12 +403,22 @@ fn run_work(app: &AppHandle, entries: &Entries, work: Work) {
             // A cancel request already set the final state; keep it.
             if entry.info.status != JobStatus::Cancelled {
                 match &result {
-                    Ok(()) => {
+                    Ok(()) if work.destination.is_file() => {
                         entry.info.status = JobStatus::Done;
                         entry.info.progress = 1.0;
                         entry.info.outputs = vec![work.destination.display().to_string()];
                         revealed = Some(work.destination.clone());
-                        diag::log(&format!("done {}", work.destination.display()));
+                        let bytes = std::fs::metadata(&work.destination).map(|meta| meta.len()).unwrap_or(0);
+                        diag::log(&format!("done {} ({bytes} bytes)", work.destination.display()));
+                    }
+                    Ok(()) => {
+                        entry.info.status = JobStatus::Failed;
+                        entry.info.error = Some("The new file was not saved.".to_string());
+                        diag::log(&format!(
+                            "failed {}: file missing at {}",
+                            entry.info.detail,
+                            work.destination.display()
+                        ));
                     }
                     Err(ForgeError::Cancelled) => entry.info.status = JobStatus::Cancelled,
                     Err(error) => {
