@@ -112,6 +112,10 @@ phases; only the convert wheel exists so far.
     carried over.
   - References to the macOS source app `exploit` are unchanged.
   - `cargo test` (70) and `npm run build` pass.
+- README rewritten as a usage walkthrough (install, Shift-drag,
+  drop, naming, picker keys, settings, format table). Image and
+  video slots are HTML comments pointing at `docs/media/`, so the
+  page stays clean until those files exist.
 - Ready to use: new app icon (radial wheel), an Install section in
   the README, and `.github/workflows/release.yml`, which builds the
   NSIS installer and publishes a GitHub release on every `v*` tag.
