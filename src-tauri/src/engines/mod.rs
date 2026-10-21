@@ -1,10 +1,12 @@
 pub mod archive;
+pub mod crop;
 pub mod audio;
 pub mod document;
 pub mod images;
 #[cfg(test)]
 mod integration_tests;
 pub mod pdf;
+pub mod pdfops;
 pub mod subtitle;
 pub mod text;
 pub mod tools;

@@ -57,7 +57,10 @@ struct Work {
     source_format: FileFormat,
     target: FileFormat,
     destination: PathBuf,
+    /// Extra files this job writes, such as the second half of a split.
+    extras: Vec<PathBuf>,
     tool: Option<FileTool>,
+    crop: Option<crate::engines::crop::CropRect>,
 }
 
 type Entries = Arc<Mutex<Vec<Entry>>>;
@@ -71,6 +74,57 @@ pub struct JobQueue {
 
 fn lock(entries: &Entries) -> MutexGuard<'_, Vec<Entry>> {
     entries.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn work_output_paths(work: &Work) -> Vec<PathBuf> {
+    let mut paths = vec![work.destination.clone()];
+    paths.extend(work.extras.iter().cloned());
+    paths
+}
+
+fn work_outputs_exist(work: &Work) -> bool {
+    work_output_paths(work).iter().all(|path| path.is_file())
+}
+
+fn remember(names: &mut HashSet<String>, path: &Path) {
+    if let Some(name) = path.file_name() {
+        names.insert(name.to_string_lossy().into_owned());
+    }
+}
+
+/// Names every file a tool will write. Split plans each piece up front.
+fn output_plan(
+    source: &Path,
+    format: FileFormat,
+    tool: FileTool,
+    directory: &Path,
+    taken: &HashSet<String>,
+) -> std::result::Result<(PathBuf, Vec<PathBuf>), String> {
+    if tool == FileTool::Split && format == FileFormat::Pdf {
+        let count = crate::engines::pdfops::page_count(source).map_err(|error| error.to_string())?;
+        if count < 2 {
+            return Err("This PDF has only one page.".into());
+        }
+        let mut names = taken.clone();
+        let mut paths = Vec::new();
+        for index in 1..=count {
+            let path = matrix::named_output(source, &format!("page {index}"), "pdf", directory, &names);
+            remember(&mut names, &path);
+            paths.push(path);
+        }
+        let destination = paths.remove(0);
+        return Ok((destination, paths));
+    }
+    if tool == FileTool::Split {
+        let mut names = taken.clone();
+        let extension = tool.extension(format);
+        let first = matrix::named_output(source, "part 1", extension, directory, &names);
+        remember(&mut names, &first);
+        let second = matrix::named_output(source, "part 2", extension, directory, &names);
+        return Ok((first, vec![second]));
+    }
+    let destination = matrix::named_output(source, tool.file_label(), tool.extension(format), directory, taken);
+    Ok((destination, Vec::new()))
 }
 
 fn snapshot(entries: &[Entry]) -> Vec<JobInfo> {
@@ -173,7 +227,9 @@ impl JobQueue {
                     source_format: from,
                     target,
                     destination: destination.clone(),
+                    extras: Vec::new(),
                     tool: None,
+                    crop: None,
                 });
                 guard.push(Entry {
                     info,
@@ -241,26 +297,34 @@ impl JobQueue {
                     .filter_map(|dest| dest.file_name())
                     .map(|name| name.to_string_lossy().into_owned())
                     .collect();
-                let destination = matrix::named_output(
-                    &source,
-                    tool.file_label(),
-                    tool.extension(format),
-                    &directory,
-                    &reserved,
-                );
-                queued.push(Work {
-                    id: id.clone(),
-                    source: source.clone(),
-                    source_format: format,
-                    target: FileFormat::Jpg,
-                    destination: destination.clone(),
-                    tool: Some(tool),
-                });
-                guard.push(Entry {
-                    info,
-                    cancel: CancelToken::new(),
-                    destination: Some(destination),
-                });
+                match output_plan(&source, format, tool, &directory, &reserved) {
+                    Ok((destination, extras)) => {
+                        queued.push(Work {
+                            id: id.clone(),
+                            source: source.clone(),
+                            source_format: format,
+                            target: FileFormat::Jpg,
+                            destination: destination.clone(),
+                            extras,
+                            tool: Some(tool),
+                            crop: None,
+                        });
+                        guard.push(Entry {
+                            info,
+                            cancel: CancelToken::new(),
+                            destination: Some(destination),
+                        });
+                    }
+                    Err(message) => {
+                        info.status = JobStatus::Failed;
+                        info.error = Some(message);
+                        guard.push(Entry {
+                            info,
+                            cancel: CancelToken::new(),
+                            destination: None,
+                        });
+                    }
+                }
             } else {
                 info.status = JobStatus::Failed;
                 info.error = failure;
@@ -279,6 +343,84 @@ impl JobQueue {
             for work in queued {
                 let _ = sender.send(work);
             }
+        }
+    }
+
+    /// Queues a crop using the rectangle chosen in the editor, in source pixels.
+    pub fn apply_crop(
+        &self,
+        source: PathBuf,
+        x: i64,
+        y: i64,
+        width: i64,
+        height: i64,
+        settings: &SettingsStore,
+    ) {
+        if x < 0 || y < 0 || width < 1 || height < 1 {
+            return;
+        }
+        let Some(format) = FileFormat::detect(&source) else {
+            return;
+        };
+        if !tools::accepts(FileTool::Crop, format) || !source.is_file() {
+            return;
+        }
+        let settings = settings.get();
+        let directory = settings.output_directory(&source, &self.app);
+        let mut guard = lock(&self.entries);
+        guard.retain(|entry| !entry.info.status.is_finished());
+        let reserved: HashSet<String> = guard
+            .iter()
+            .filter_map(|entry| entry.destination.as_ref())
+            .filter_map(|dest| dest.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .collect();
+        let destination = matrix::named_output(
+            &source,
+            FileTool::Crop.file_label(),
+            FileTool::Crop.extension(format),
+            &directory,
+            &reserved,
+        );
+        let id = uuid::Uuid::new_v4().to_string();
+        let detail = source
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| source.display().to_string());
+        guard.push(Entry {
+            info: JobInfo {
+                id: id.clone(),
+                title: FileTool::Crop.title().to_string(),
+                detail,
+                category: Some(format.category()),
+                status: JobStatus::Waiting,
+                progress: 0.0,
+                error: None,
+                outputs: Vec::new(),
+            },
+            cancel: CancelToken::new(),
+            destination: Some(destination.clone()),
+        });
+        let jobs = snapshot(&guard);
+        drop(guard);
+        publish(&self.app, jobs);
+        let rect = crate::engines::crop::CropRect {
+            x: x as u32,
+            y: y as u32,
+            width: width as u32,
+            height: height as u32,
+        };
+        if let Ok(sender) = self.sender.lock() {
+            let _ = sender.send(Work {
+                id,
+                source,
+                source_format: format,
+                target: FileFormat::Jpg,
+                destination,
+                extras: Vec::new(),
+                tool: Some(FileTool::Crop),
+                crop: Some(rect),
+            });
         }
     }
 
@@ -389,6 +531,8 @@ fn run_work(app: &AppHandle, entries: &Entries, work: Work) {
             work.source_format,
             tool,
             &work.destination,
+            &work.extras,
+            work.crop,
             &request.progress,
             &request.cancel,
         )
@@ -403,13 +547,16 @@ fn run_work(app: &AppHandle, entries: &Entries, work: Work) {
             // A cancel request already set the final state; keep it.
             if entry.info.status != JobStatus::Cancelled {
                 match &result {
-                    Ok(()) if work.destination.is_file() => {
+                    Ok(()) if work_outputs_exist(&work) => {
                         entry.info.status = JobStatus::Done;
                         entry.info.progress = 1.0;
-                        entry.info.outputs = vec![work.destination.display().to_string()];
-                        revealed = Some(work.destination.clone());
-                        let bytes = std::fs::metadata(&work.destination).map(|meta| meta.len()).unwrap_or(0);
-                        diag::log(&format!("done {} ({bytes} bytes)", work.destination.display()));
+                        let outputs = work_output_paths(&work);
+                        for path in &outputs {
+                            let bytes = std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+                            diag::log(&format!("done {} ({bytes} bytes)", path.display()));
+                        }
+                        entry.info.outputs = outputs.iter().map(|path| path.display().to_string()).collect();
+                        revealed = outputs.first().cloned();
                     }
                     Ok(()) => {
                         entry.info.status = JobStatus::Failed;

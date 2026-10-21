@@ -29,9 +29,9 @@
 - `src-tauri/src/dragmon.rs` - low-level mouse hook plus a
   controller thread; decides when a modifier-drag from Explorer or
   the desktop should open the wheel. Shift opens convert. Ctrl
-  opens image, video, and audio tools, which write a new file and
-  leave the original. Once open, the wheel stays until the mouse
-  button is released.
+  opens image, video, audio, and PDF tools, which write a new file
+  and leave the original. Crop opens its own window first. Once
+  open, the wheel stays until the mouse button is released.
 - `src-tauri/src/wheel.rs` - the full-monitor overlay window
   and its show/hide/mode events. The window is parked on the
   monitor at full size while hidden, including at mouse-down,
@@ -43,6 +43,9 @@
   window is created the first time Settings is opened, and
   closing it destroys it. The process stays running because a
   window close does not exit the tray app.
+- `src-tauri/src/cropwin.rs` - the crop editor. It shows one
+  image or video frame; the page reports the kept rectangle and
+  Rust writes a new file. The original is not changed.
 - `src-tauri/src/picker.rs` - menu/hotkey entry: file dialog, then
   the wheel in picker mode; global shortcut registration.
 - `src/` - React UI. Calls Tauri commands, listens to events.

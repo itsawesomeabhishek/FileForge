@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyFileTool,
+  openCropEditor,
   availableTargets,
   convertFiles,
   listJobs,
@@ -66,6 +67,7 @@ function toolsFor(files: FileInfo[] | null, pathCount: number) {
       { id: "compress", label: "COMPRESS", category },
       { id: "metadata", label: "METADATA", category },
       { id: "background", label: "ADD BG", category },
+      ...(pathCount === 1 ? [{ id: "crop", label: "CROP", category }] : []),
     ];
   }
   if (category === "video") {
@@ -74,15 +76,25 @@ function toolsFor(files: FileInfo[] | null, pathCount: number) {
       { id: "mute", label: "MUTE", category },
       { id: "snapshot", label: "SNAPSHOT", category },
       { id: "metadata", label: "METADATA", category },
+      { id: "speed", label: "SPEED", category },
+      { id: "split", label: "SPLIT", category },
+      ...(pathCount === 1 ? [{ id: "crop", label: "CROP", category }] : []),
     ];
   }
   if (category === "audio") {
     return [
       { id: "compress", label: "COMPRESS", category },
       { id: "normalize", label: "NORMALIZE", category },
-      { id: "mono", label: "MONO", category },
+      { id: "mono", label: "CHANNELS", category },
       { id: "metadata", label: "METADATA", category },
       { id: "visualize", label: "VISUALIZE", category },
+    ];
+  }
+  if (files.every((file) => file.format === "pdf")) {
+    return [
+      { id: "compress", label: "COMPRESS", category },
+      { id: "metadata", label: "METADATA", category },
+      { id: "split", label: "SPLIT", category },
     ];
   }
   return [];
@@ -262,9 +274,11 @@ export default function WheelApp() {
       const source = paths.length > 0 ? paths : dropped;
       if (item && source.length > 0) {
         const run =
-          session?.mode === "tools"
-            ? applyFileTool(source, item.id as FileTool)
-            : convertFiles(convertible.length > 0 ? convertible.map((file) => file.path) : source, item.id);
+          item.id === "crop"
+            ? openCropEditor(source[0])
+            : session?.mode === "tools"
+              ? applyFileTool(source, item.id as FileTool)
+              : convertFiles(convertible.length > 0 ? convertible.map((file) => file.path) : source, item.id);
         run.catch((error) => console.error("wheel action failed", error));
       }
       finish();

@@ -60,10 +60,28 @@ export type FileTool =
   | "snapshot"
   | "normalize"
   | "mono"
-  | "visualize";
+  | "visualize"
+  | "speed"
+  | "split";
 
 export const applyFileTool = (paths: string[], tool: FileTool) =>
   invoke<void>("apply_file_tool", { paths, tool });
+
+export interface CropPreview {
+  width: number;
+  height: number;
+  pngBase64: string;
+  video: boolean;
+}
+
+export const openCropEditor = (path: string) => invoke<void>("open_crop_editor", { path });
+
+export const cropPreview = (path: string) => invoke<CropPreview>("crop_preview", { path });
+
+export const currentCrop = () => invoke<string | null>("current_crop");
+
+export const applyCrop = (path: string, x: number, y: number, width: number, height: number) =>
+  invoke<void>("apply_crop", { path, x, y, width, height });
 
 export type JobStatus = "waiting" | "running" | "done" | "cancelled" | "failed";
 

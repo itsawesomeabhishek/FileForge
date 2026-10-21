@@ -67,13 +67,18 @@ selection has no tools. File actions stay a later wheel.
 
 Working on Ctrl, when every file is the same kind:
 
-- Images: Compress, Metadata, Add background.
-- Video and GIF: Compress, Mute, Snapshot, Metadata.
-- Audio: Compress, Normalize, Mono, Metadata, Visualize.
+- Images: Compress, Metadata, Add background. Crop opens an
+  editor where the kept area can be dragged or typed in pixels.
+- Video and GIF: Compress, Mute, Snapshot, Metadata, Speed
+  (always twice as fast), Split (two files at the midpoint).
+  Crop opens the same editor and applies that area to every frame.
+- Audio: Compress, Normalize, Channels (mixes to mono), Metadata,
+  Visualize.
+- PDF: Compress, Metadata, Split (one file per page).
 
-Still needs an editor window, so it is not on the wheel: image
-crop, redact, edit, annotate; video redact, trim, speed, crop,
-split; audio trim, bleep, and a channel picker.
+Still needs the user to mark the file, so it is not on the wheel:
+redact, edit, annotate, trim, and bleep. PDF organize needs a page
+order.
 
 PDF text and markdown are on the Shift wheel. PDF pages as
 images, DOCX, Pages, PPTX, XLSX, ODS, EPUB, and RAR are not,
@@ -83,11 +88,12 @@ read, not written. Pages, AirDrop, and Float are Mac-only.
 ### Out of Scope
 
 - Phase 1 excludes the editing tools that are not listed as
-  working above (photo edit, crop, redact, resize, rotate,
-  collage, PDF merge/split/organize, video trim/crop/speed/
-  join/frames/split, audio trim/bleep). They are later phases,
-  one feature unit each. Audio normalize, mono, and waveform
-  video are on the Ctrl wheel.
+  working above (photo edit, redact, resize, rotate, collage,
+  PDF merge/organize, video trim/join/frames, audio trim/bleep).
+  They are later phases, one feature unit each. Crop, video
+  speed and split, and PDF compress, metadata, and split are
+  on the Ctrl wheel. Audio normalize, mono, and waveform video
+  are on the Ctrl wheel.
 - RAR input. ZIP, TAR, and GZIP convert to each other.
 - docx output and pdf to image/docx/txt (deferred, hidden
   rather than offered and failing).

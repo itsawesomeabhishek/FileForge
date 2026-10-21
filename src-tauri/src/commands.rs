@@ -181,6 +181,55 @@ pub fn reveal_output(path: String, queue: State<'_, JobQueue>) -> Result<(), Str
     tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| e.to_string())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CropPreview {
+    width: u32,
+    height: u32,
+    png_base64: String,
+    video: bool,
+}
+
+/// Picture the crop editor draws, and the pixel size the numbers use.
+#[tauri::command]
+pub fn crop_preview(path: String) -> Result<CropPreview, String> {
+    let path = PathBuf::from(&path);
+    let format = FileFormat::detect(&path).ok_or_else(|| format!("Unsupported file type: {}", path.display()))?;
+    let preview = crate::engines::crop::preview(&path, format).map_err(|error| error.to_string())?;
+    Ok(CropPreview {
+        width: preview.width,
+        height: preview.height,
+        png_base64: preview.png_base64,
+        video: preview.video,
+    })
+}
+
+/// Opens the crop editor for one image or video. Nothing is written yet.
+#[tauri::command]
+pub fn open_crop_editor(path: String, app: AppHandle) {
+    crate::cropwin::open(&app, path);
+}
+
+/// The file the crop window should load, if the open event arrived first.
+#[tauri::command]
+pub fn current_crop() -> Option<String> {
+    crate::cropwin::current()
+}
+
+/// Writes a new cropped file from the rectangle the editor confirmed.
+#[tauri::command]
+pub fn apply_crop(
+    path: String,
+    x: i64,
+    y: i64,
+    width: i64,
+    height: i64,
+    queue: State<'_, JobQueue>,
+    settings: State<'_, SettingsStore>,
+) {
+    queue.apply_crop(PathBuf::from(path), x, y, width, height, &settings);
+}
+
 /// Closes the wheel overlay (after a selection, cancel, or drop).
 #[tauri::command]
 pub fn wheel_hide(app: AppHandle) {

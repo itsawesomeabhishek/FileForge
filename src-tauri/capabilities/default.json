@@ -2,12 +2,13 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "wheel"],
+  "windows": ["main", "wheel", "crop"],
   "permissions": [
     "core:default",
     "core:event:default",
     "core:window:allow-hide",
     "core:window:allow-show",
+    "core:window:allow-close",
     "core:window:allow-set-focus",
     "opener:default",
     "dialog:allow-open"

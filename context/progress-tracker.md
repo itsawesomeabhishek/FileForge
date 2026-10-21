@@ -145,6 +145,9 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
+- Crop editor: drag or type the kept area for one image or video.
+  Speed doubles a video, split cuts a video in half or writes one
+  PDF per page, and PDF compress and metadata run from the Ctrl wheel.
 - Release 0.1.5: a drop stays on the wedge it was aimed at. The
   overlay covers the monitor before the drag moves, the page and
   the drop share one pixel scale, an early drop is kept until the

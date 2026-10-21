@@ -66,14 +66,19 @@ the wheel, and nothing is converted.
 Press **Ctrl** instead of Shift. The wheel follows the kind of file
 you dragged, and every tool writes a new file beside the original.
 
-- Images: Compress, Metadata, Add background.
-- Video, including GIF: Compress, Mute, Snapshot, Metadata.
-- Audio: Compress, Normalize, Mono, Metadata, Visualize (an MP4 of the waveform).
+- Images: Compress, Metadata, Add background. Crop opens a window
+  where you drag the area or type the pixel size, then saves a new file.
+- Video, including GIF: Compress, Mute, Snapshot, Metadata, Speed
+  (twice as fast), Split (two files, cut at the middle). Crop uses
+  the same window and keeps that area in every frame.
+- Audio: Compress, Normalize, Channels (mixes to mono), Metadata,
+  Visualize (an MP4 of the waveform).
+- PDF: Compress, Metadata, Split (one new file per page).
 
-A drag that mixes images with video, or a PDF, has no tools yet.
-Crop, trim, redact, speed, split, and bleep need their own window.
-PDF, Word, Pages, slides, spreadsheets, and EPUB are not on the wheel
-until FileForge can write those files.
+A drag that mixes images with video has no tools. Redact, edit,
+annotate, trim, and bleep stay off the wheel until you can mark
+the file. Word, Pages, slides, spreadsheets, and EPUB are not
+offered yet.
 
 The wheel only lists formats that work for **every** file in the drag.
 A PNG and a WAV dragged together have no format in common, so the wheel

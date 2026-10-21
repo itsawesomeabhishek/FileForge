@@ -1,4 +1,5 @@
 mod commands;
+mod cropwin;
 mod diag;
 mod dragmon;
 mod engines;
@@ -78,6 +79,10 @@ pub fn run() {
             commands::open_output,
             commands::reveal_output,
             commands::wheel_hide,
+            commands::crop_preview,
+            commands::open_crop_editor,
+            commands::current_crop,
+            commands::apply_crop,
             commands::show_logs,
         ])
         .build(tauri::generate_context!())

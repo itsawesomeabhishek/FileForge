@@ -118,6 +118,38 @@ impl ConversionEngine for ImageEngine {
     }
 }
 
+pub(crate) fn decode_for_crop(
+    source: &Path,
+    format: FileFormat,
+    progress: &ProgressFn,
+    cancel: &CancelToken,
+) -> Result<DynamicImage> {
+    decode(source, format, progress, cancel)
+}
+
+/// Crops in pixels of the oriented image. The original is never written.
+pub fn crop_image(
+    source: &Path,
+    format: FileFormat,
+    rect: crate::engines::crop::CropRect,
+    destination: &Path,
+    progress: &ProgressFn,
+    cancel: &CancelToken,
+) -> Result<()> {
+    let decoded = decode(source, format, progress, cancel)?;
+    progress(0.45);
+    cancel.check()?;
+    if rect.x.saturating_add(rect.width) > decoded.width() || rect.y.saturating_add(rect.height) > decoded.height() {
+        return Err(ForgeError::InvalidInput(
+            "The crop area sits outside the picture.".into(),
+        ));
+    }
+    let cropped = decoded.crop_imm(rect.x, rect.y, rect.width, rect.height);
+    write_without_metadata(&cropped, destination)?;
+    progress(1.0);
+    Ok(())
+}
+
 pub fn apply_image_tool(
     source: &Path,
     format: FileFormat,
