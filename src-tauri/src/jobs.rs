@@ -76,7 +76,15 @@ fn snapshot(entries: &[Entry]) -> Vec<JobInfo> {
 }
 
 fn publish(app: &AppHandle, jobs: Vec<JobInfo>) {
-    let _ = app.emit("jobs-updated", jobs);
+    let _ = app.emit("jobs-updated", &jobs);
+    let running = jobs.iter().any(|job| !job.status.is_finished());
+    if jobs.is_empty() {
+        crate::wheel::sync_progress(app, false, false);
+    } else if running {
+        crate::wheel::sync_progress(app, true, false);
+    } else {
+        crate::wheel::sync_progress(app, true, true);
+    }
 }
 
 impl JobQueue {

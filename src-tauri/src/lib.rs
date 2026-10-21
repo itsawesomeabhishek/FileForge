@@ -13,7 +13,20 @@ mod tray;
 mod wheel;
 
 use tauri::Manager;
-use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+
+/// Puts FileForge in the Windows startup apps unless the user turned that off.
+fn register_startup(app: &tauri::AppHandle, enabled: bool) {
+    let manager = app.autolaunch();
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
+    if let Err(error) = result {
+        diag::log(&format!("startup registration: {error}"));
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,7 +46,9 @@ pub fn run() {
             let log_dir = app.path().app_log_dir()?;
             diag::init(log_dir.join("fileforge.log"));
 
-            app.manage(settings::SettingsStore::load(config_dir.join("settings.json")));
+            let store = settings::SettingsStore::load(config_dir.join("settings.json"));
+            register_startup(app.handle(), store.get().launch_at_login);
+            app.manage(store);
             app.manage(jobs::JobQueue::start(app.handle().clone()));
             tray::install(app.handle())?;
             picker::register_shortcuts(app.handle());

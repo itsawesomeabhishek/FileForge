@@ -15,6 +15,7 @@ pub fn begin(app: &AppHandle, mode: Mode) {
         wheel::hide(app);
         return;
     }
+    wheel::prepare(app);
     let app = app.clone();
     std::thread::spawn(move || {
         let Some(files) = app.dialog().file().blocking_pick_files() else {

@@ -49,7 +49,8 @@ stylesheet `src/App.css`. Keep components small and in
 - There is no convert window. The only regular window is
   Settings (hidden until opened from the tray); conversions are
   driven entirely by the radial wheel.
-- Progress: a pill/card near the screen edge (planned).
+- Progress: a card at the bottom center of the screen while a
+  conversion is running, including a bar and a short result.
 
 ## Radial Wheel (overlay window)
 

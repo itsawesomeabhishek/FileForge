@@ -111,11 +111,14 @@ export default function SettingsView() {
           <input
             type="checkbox"
             checked={launchAtLogin}
-            onChange={(e) =>
-              setLaunchAtLogin(e.target.checked)
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              setLaunch(enabled);
+              setSettings({ ...settings, launchAtLogin: enabled });
+              setLaunchAtLogin(enabled)
                 .then(setLaunch)
-                .catch((err) => setError(String(err)))
-            }
+                .catch((err) => setError(String(err)));
+            }}
           />
           <span className="setting-label">Start FileForge when I sign in</span>
         </label>

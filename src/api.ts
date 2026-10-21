@@ -35,6 +35,7 @@ export interface Settings {
   ffmpegPath: string;
   wheelEnabled: boolean;
   excludedApps: string[];
+  launchAtLogin: boolean;
 }
 
 export type Health =
@@ -50,6 +51,24 @@ export const availableTargets = (formats: string[]) =>
 
 export const convertFiles = (paths: string[], target: string) =>
   invoke<void>("convert_files", { paths, target });
+
+export type JobStatus = "waiting" | "running" | "done" | "cancelled" | "failed";
+
+export interface JobInfo {
+  id: string;
+  title: string;
+  detail: string;
+  category: Category | null;
+  status: JobStatus;
+  progress: number;
+  error: string | null;
+  outputs: string[];
+}
+
+export const listJobs = () => invoke<JobInfo[]>("list_jobs");
+
+export const onJobsUpdated = (handler: (jobs: JobInfo[]) => void): Promise<UnlistenFn> =>
+  listen<JobInfo[]>("jobs-updated", (event) => handler(event.payload));
 
 export const getSettings = () => invoke<Settings>("get_settings");
 export const updateSettings = (settings: Settings) =>
@@ -95,6 +114,9 @@ export const onWheelMode = (handler: (mode: WheelMode) => void): Promise<Unliste
 
 export const onWheelHide = (handler: () => void): Promise<UnlistenFn> =>
   listen("wheel-hide", () => handler());
+
+export const onWheelPill = (handler: () => void): Promise<UnlistenFn> =>
+  listen("wheel-pill", () => handler());
 
 export interface WheelDragHandlers {
   onEnter: (paths: string[], x: number, y: number) => void;

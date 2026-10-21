@@ -2,13 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   availableTargets,
   convertFiles,
+  listJobs,
+  onJobsUpdated,
   onWheelDrag,
   onWheelHide,
   onWheelMode,
+  onWheelPill,
   onWheelShow,
   probeFiles,
   wheelHide,
   type FileInfo,
+  type JobInfo,
   type TargetInfo,
   type WheelMode,
   type WheelShow,
@@ -70,6 +74,42 @@ function emptyMessage(
   };
 }
 
+function ProgressCard({ jobs }: { jobs: JobInfo[] }) {
+  const current =
+    jobs.find((job) => job.status === "running") ??
+    jobs.find((job) => job.status === "waiting") ??
+    jobs[jobs.length - 1];
+  const finished = jobs.filter((job) => job.status === "done" || job.status === "failed").length;
+  const label =
+    current.status === "done"
+      ? "Done"
+      : current.status === "failed"
+        ? "Could not convert"
+        : current.status === "cancelled"
+          ? "Cancelled"
+          : current.status === "waiting"
+            ? "Waiting to convert"
+            : current.title;
+  const indeterminate = current.status === "running" && current.progress < 0.02;
+  const width = `${Math.max(4, Math.round(current.progress * 100))}%`;
+
+  return (
+    <div className="progress-card" role="status">
+      <div className="progress-copy">
+        <span className="progress-title">{label}</span>
+        <span className="progress-detail">
+          {current.detail}
+          {jobs.length > 1 ? ` · ${finished} of ${jobs.length}` : ""}
+        </span>
+        {current.error && <span className="progress-error">{current.error}</span>}
+      </div>
+      <div className={`progress-track${indeterminate ? " is-indeterminate" : ""}`}>
+        <span style={indeterminate ? undefined : { width }} />
+      </div>
+    </div>
+  );
+}
+
 export default function WheelApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [paths, setPaths] = useState<string[]>([]);
@@ -77,6 +117,8 @@ export default function WheelApp() {
   const [targets, setTargets] = useState<TargetInfo[]>([]);
   const [hover, setHover] = useState<number | null>(null);
   const [epoch, setEpoch] = useState(0);
+  const [jobs, setJobs] = useState<JobInfo[]>([]);
+  const [pill, setPill] = useState(false);
   const pointer = useRef<Point | null>(null);
   const hoverRef = useRef<number | null>(null);
   hoverRef.current = hover;
@@ -162,6 +204,7 @@ export default function WheelApp() {
   useListener(() =>
     onWheelShow((show: WheelShow) => {
       trace("show", show);
+      setPill(false);
       setSession({ mode: show.mode, center: { x: show.x, y: show.y }, picker: show.picker });
       setPaths(show.paths);
       setHover(null);
@@ -180,6 +223,11 @@ export default function WheelApp() {
       reset();
     }),
   );
+  useListener(() => onWheelPill(() => setPill(true)));
+  useListener(() => onJobsUpdated(setJobs));
+  useEffect(() => {
+    listJobs().then(setJobs).catch(() => setJobs([]));
+  }, []);
   useListener(() =>
     onWheelDrag({
       onEnter: (dropped, x, y) => {
@@ -261,6 +309,7 @@ export default function WheelApp() {
         choose(index);
       }}
     >
+      {!session && pill && jobs.length > 0 && <ProgressCard jobs={jobs} />}
       {session && visible && (
         <div
           key={epoch}

@@ -112,6 +112,14 @@ phases; only the convert wheel exists so far.
     carried over.
   - References to the macOS source app `exploit` are unchanged.
   - `cargo test` (70) and `npm run build` pass.
+- Launch at login is on by default. The first run registers
+  FileForge with Windows startup. Turning the Settings checkbox
+  off is remembered and is not switched back on.
+- Wheel appears on the first drag: the overlay starts loading at
+  mouse-down, not after the drag has already passed the threshold,
+  and a cancelled create is kept instead of destroyed. A progress
+  card (title, file name, bar) stays at the bottom of the screen
+  until the conversion finishes, then for a few seconds.
 - Version 0.1.1: the idle-memory window lifecycle above.
 - Idle memory: the settings window is not created until Settings
   is opened, and closing it destroys the webview. The wheel is

@@ -127,7 +127,14 @@ pub fn get_launch_at_login(app: AppHandle) -> bool {
 }
 
 #[tauri::command]
-pub fn set_launch_at_login(enabled: bool, app: AppHandle) -> Result<bool, String> {
+pub fn set_launch_at_login(
+    enabled: bool,
+    app: AppHandle,
+    store: State<'_, SettingsStore>,
+) -> Result<bool, String> {
+    let mut settings = store.get();
+    settings.launch_at_login = enabled;
+    store.update(settings)?;
     let manager = app.autolaunch();
     if enabled {
         manager.enable().map_err(|e| e.to_string())?;

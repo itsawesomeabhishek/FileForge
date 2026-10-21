@@ -25,6 +25,8 @@ pub struct Settings {
     pub wheel_enabled: bool,
     /// Executable names (e.g. `code.exe`) the wheel ignores drags from.
     pub excluded_apps: Vec<String>,
+    /// Register with Windows startup. On unless the user turns it off.
+    pub launch_at_login: bool,
 }
 
 impl Default for Settings {
@@ -36,6 +38,7 @@ impl Default for Settings {
             ffmpeg_path: String::new(),
             wheel_enabled: true,
             excluded_apps: Vec::new(),
+            launch_at_login: true,
         }
     }
 }
@@ -163,6 +166,7 @@ mod tests {
         let parsed: Settings = serde_json::from_str(r#"{"jpegQuality":0.5}"#).unwrap();
         assert_eq!(parsed.jpeg_quality, 0.5);
         assert!(parsed.reveal_in_explorer);
+        assert!(parsed.launch_at_login);
     }
 
     #[test]

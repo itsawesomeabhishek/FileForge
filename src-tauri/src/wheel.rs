@@ -1,4 +1,4 @@
-//! The radial wheel overlay: one pre-created, hidden, transparent,
+//! The radial wheel overlay: a transparent,
 //! always-on-top window that is moved over the monitor under the cursor
 //! while a drag (or the file picker) is active.
 //!
@@ -7,6 +7,7 @@
 //! like the full-screen panel on macOS. The React side draws the wheel.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
@@ -46,12 +47,24 @@ struct ShowPayload {
 }
 
 static VISIBLE: AtomicBool = AtomicBool::new(false);
-/// Bumped on every show and hide so a late create or destroy cannot
-/// revive a window the user has already dismissed.
+static PILL: AtomicBool = AtomicBool::new(false);
+static CREATING: AtomicBool = AtomicBool::new(false);
+/// Bumped whenever the overlay is shown or asked to stay, so a delayed
+/// release does not destroy a window that is in use again.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
-/// How long the hidden wheel stays allocated so an in-flight drop can
-/// still reach the page. Then the webview is destroyed and WebView2 exits.
-const RELEASE_AFTER: Duration = Duration::from_millis(1500);
+/// How long a hidden, idle overlay is kept. Long enough that the next
+/// drag is instant, then WebView2 is released.
+const RELEASE_AFTER: Duration = Duration::from_secs(180);
+const PILL_HOLD: Duration = Duration::from_millis(3200);
+
+struct PendingShow {
+    mode: Mode,
+    cursor: (i32, i32),
+    picker: bool,
+    paths: Vec<String>,
+}
+
+static PENDING: Mutex<Option<PendingShow>> = Mutex::new(None);
 
 pub fn is_visible() -> bool {
     VISIBLE.load(Ordering::SeqCst)
@@ -97,43 +110,94 @@ pub fn clamp_center(x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
     (clamp(x, width), clamp(y, height))
 }
 
-/// Shows the wheel over the monitor containing `cursor` (physical pixels).
-///
-/// The overlay is created on demand and destroyed after it closes, so
-/// WebView2 is not resident while FileForge sits in the tray. The first
-/// show after idle waits for that startup.
-pub fn show(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths: Vec<String>) {
-    let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
-    if window(app).is_some() {
-        present(app, mode, cursor, picker, paths);
+/// Starts the overlay as soon as a drag might become the wheel, so the
+/// window exists before the mouse is released. Creating it only after the
+/// drag threshold meant the first drop finished before WebView2 was ready.
+pub fn prepare(app: &AppHandle) {
+    if window(app).is_some() || CREATING.swap(true, Ordering::SeqCst) {
         return;
     }
-
     let handle = app.clone();
     if let Err(error) = app.run_on_main_thread(move || {
-        if GENERATION.load(Ordering::SeqCst) != generation {
-            return;
-        }
         if window(&handle).is_none() {
             if let Err(error) = create(&handle) {
                 diag::log(&format!("wheel: create failed: {error}"));
+                CREATING.store(false, Ordering::SeqCst);
                 return;
             }
         }
-        if GENERATION.load(Ordering::SeqCst) != generation {
-            if let Some(window) = window(&handle) {
-                let _ = window.destroy();
+        CREATING.store(false, Ordering::SeqCst);
+        if let Some(pending) = PENDING.lock().ok().and_then(|mut slot| slot.take()) {
+            let cursor = if pending.picker {
+                pending.cursor
+            } else {
+                crate::dragmon::cursor_position().unwrap_or(pending.cursor)
+            };
+            present(&handle, pending.mode, cursor, pending.picker, pending.paths);
+        } else if PILL.load(Ordering::SeqCst) {
+            show_pill_now(&handle);
+        }
+    }) {
+        CREATING.store(false, Ordering::SeqCst);
+        diag::log(&format!("wheel: {error}"));
+    }
+}
+
+/// Shows the wheel over the monitor containing `cursor` (physical pixels).
+pub fn show(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths: Vec<String>) {
+    GENERATION.fetch_add(1, Ordering::SeqCst);
+    let pending = PendingShow {
+        mode,
+        cursor,
+        picker,
+        paths,
+    };
+    let ready = window(app).is_some() && !CREATING.load(Ordering::SeqCst);
+    if let Ok(mut slot) = PENDING.lock() {
+        *slot = Some(pending);
+        if ready {
+            if let Some(pending) = slot.take() {
+                drop(slot);
+                let cursor = if pending.picker {
+                    pending.cursor
+                } else {
+                    crate::dragmon::cursor_position().unwrap_or(pending.cursor)
+                };
+                present(app, pending.mode, cursor, pending.picker, pending.paths);
             }
             return;
         }
-        let cursor = if picker {
-            cursor
+    }
+    prepare(app);
+}
+
+/// Shows or hides the small conversion card. `hold` keeps the card up
+/// after the job finishes so the result can be read.
+pub fn sync_progress(app: &AppHandle, show: bool, hold: bool) {
+    if show {
+        let epoch = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+        PILL.store(true, Ordering::SeqCst);
+        if VISIBLE.load(Ordering::SeqCst) {
+            return;
+        }
+        if window(app).is_some() && !CREATING.load(Ordering::SeqCst) {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || show_pill_now(&handle));
         } else {
-            crate::dragmon::cursor_position().unwrap_or(cursor)
-        };
-        present(&handle, mode, cursor, picker, paths);
-    }) {
-        diag::log(&format!("wheel: {error}"));
+            prepare(app);
+        }
+        if hold {
+            let app = app.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(PILL_HOLD);
+                if GENERATION.load(Ordering::SeqCst) != epoch {
+                    return;
+                }
+                sync_progress(&app, false, false);
+            });
+        }
+    } else if PILL.swap(false, Ordering::SeqCst) && !VISIBLE.load(Ordering::SeqCst) {
+        conceal(app);
     }
 }
 
@@ -171,6 +235,7 @@ fn present(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths:
         size.height as f64 / scale,
     );
 
+    let _ = window.set_ignore_cursor_events(false);
     let _ = window.set_focusable(picker);
     let _ = window.set_position(PhysicalPosition::new(pos.x, pos.y));
     let _ = window.set_size(PhysicalSize::new(size.width, size.height));
@@ -203,23 +268,44 @@ pub fn set_mode(app: &AppHandle, mode: Mode) {
 }
 
 pub fn hide(app: &AppHandle) {
+    if let Ok(mut slot) = PENDING.lock() {
+        *slot = None;
+    }
+    conceal(app);
+    if PILL.load(Ordering::SeqCst) && !VISIBLE.load(Ordering::SeqCst) {
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || show_pill_now(&handle));
+    }
+}
+
+fn conceal(app: &AppHandle) {
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     if let Some(window) = window(app) {
         let _ = window.emit("wheel-hide", ());
         let _ = window.hide();
         let _ = window.set_focusable(false);
+        let _ = window.set_ignore_cursor_events(false);
     }
     VISIBLE.store(false, Ordering::SeqCst);
+    schedule_release(app, generation);
+}
 
+fn schedule_release(app: &AppHandle, generation: u64) {
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(RELEASE_AFTER);
-        if GENERATION.load(Ordering::SeqCst) != generation {
+        if GENERATION.load(Ordering::SeqCst) != generation
+            || VISIBLE.load(Ordering::SeqCst)
+            || PILL.load(Ordering::SeqCst)
+        {
             return;
         }
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
-            if GENERATION.load(Ordering::SeqCst) != generation {
+            if GENERATION.load(Ordering::SeqCst) != generation
+                || VISIBLE.load(Ordering::SeqCst)
+                || PILL.load(Ordering::SeqCst)
+            {
                 return;
             }
             if let Some(window) = window(&handle) {
@@ -227,6 +313,36 @@ pub fn hide(app: &AppHandle) {
             }
         });
     });
+}
+
+fn show_pill_now(app: &AppHandle) {
+    if VISIBLE.load(Ordering::SeqCst) {
+        return;
+    }
+    let Some(window) = window(app) else {
+        return;
+    };
+    let monitor = app.primary_monitor().ok().flatten();
+    let Some(monitor) = monitor else {
+        return;
+    };
+    let scale = monitor.scale_factor();
+    let pos = *monitor.position();
+    let size = *monitor.size();
+    let width = (400.0 * scale).round() as u32;
+    let height = (96.0 * scale).round() as u32;
+    let x = pos.x + (size.width as i32 - width as i32) / 2;
+    let y = pos.y + size.height as i32 - height as i32 - (32.0 * scale).round() as i32;
+
+    let _ = window.set_ignore_cursor_events(true);
+    let _ = window.set_focusable(false);
+    let _ = window.set_always_on_top(true);
+    let _ = window.set_size(PhysicalSize::new(width, height));
+    let _ = window.set_position(PhysicalPosition::new(x, y));
+    let _ = window.emit("wheel-pill", ());
+    if let Err(error) = window.show() {
+        diag::log(&format!("wheel: progress pill failed: {error}"));
+    }
 }
 
 #[cfg(test)]

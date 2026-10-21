@@ -287,6 +287,9 @@ fn on_event(app: &AppHandle, state: State, event: MouseEvent) -> State {
                 return State::Idle;
             }
             if allowed_source((x, y)) {
+                // Build the overlay now, before the pointer has moved far
+                // enough to count as a drag, so the first drop can land on it.
+                wheel::prepare(app);
                 State::Candidate { start: (x, y) }
             } else {
                 State::Idle
