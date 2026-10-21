@@ -1,0 +1,161 @@
+/* Overlay window: fully transparent except for the wheel itself. */
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+}
+
+.wheel-root {
+  position: fixed;
+  inset: 0;
+  --wheel-accent: #ff5c00;
+  --wheel-fill: rgba(28, 28, 34, 0.86);
+  --wheel-edge: rgba(255, 255, 255, 0.14);
+}
+
+.wheel-disc {
+  position: absolute;
+  color: #f2f2f5;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.4));
+  animation: wheel-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none;
+}
+
+@keyframes wheel-in {
+  from {
+    transform: scale(0.84);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.wheel-disc > svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.wheel-label svg {
+  flex: none;
+}
+
+.wheel-wedge {
+  fill: var(--wheel-fill);
+  stroke: var(--wheel-edge);
+  stroke-width: 1;
+  transition:
+    transform 160ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    fill 120ms ease;
+}
+
+.wheel-wedge.is-selected {
+  fill: var(--wheel-accent);
+  stroke: rgba(255, 255, 255, 0.35);
+}
+
+.wheel-label {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transform: translate(-50%, -50%);
+  color: #f2f2f5;
+  text-align: center;
+  transition:
+    left 160ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    top 160ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.wheel-label span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.wheel-label.is-dense {
+  gap: 3px;
+}
+
+.wheel-label.is-dense span {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.wheel-label.is-selected {
+  color: #fff;
+}
+
+.wheel-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  max-width: 120px;
+  height: 34px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  border-radius: 17px;
+  background: var(--wheel-fill);
+  border: 1px solid var(--wheel-edge);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.wheel-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  max-width: 300px;
+  padding: 12px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: 18px;
+  background: var(--wheel-fill);
+  border: 1px solid var(--wheel-edge);
+  text-align: center;
+}
+
+.wheel-empty-message {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.wheel-empty-detail {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #a8a8b3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-disc {
+    animation: none;
+  }
+  .wheel-wedge,
+  .wheel-label {
+    transition: none;
+  }
+}

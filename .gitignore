@@ -28,6 +28,9 @@ pnpm-debug.log*
 # Rust / Tauri
 src-tauri/target/
 
+# FFmpeg sidecars (downloaded by scripts/fetch-ffmpeg.ps1)
+src-tauri/binaries/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
@@ -40,3 +43,6 @@ src-tauri/target/
 *.pem
 *.key
 
+
+# Built installers
+release/
