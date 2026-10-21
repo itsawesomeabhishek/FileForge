@@ -267,6 +267,7 @@ export default function WheelApp() {
     onWheelHide(() => {
       trace("hide");
       reset();
+      setPill(false);
     }),
   );
   useListener(() => onWheelPill(() => setPill(true)));

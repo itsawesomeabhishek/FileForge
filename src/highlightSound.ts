@@ -1,11 +1,7 @@
-// A short tick when the pointer moves onto a wheel wedge.
-// Tangerine's landing page plays /sounds/highlight.wav (60 ms, quiet)
-// on each new highlight. This is an original tick of the same length,
-// not a copy of that file.
+// A soft click when the pointer moves onto a wheel wedge.
+// Short sine, quiet, no noise.
 
 let context: AudioContext | null = null;
-let tick: AudioBuffer | null = null;
-let playing: AudioBufferSourceNode | null = null;
 
 function audioContext(): AudioContext | null {
   const Ctx = window.AudioContext;
@@ -14,45 +10,20 @@ function audioContext(): AudioContext | null {
   return context;
 }
 
-function tickBuffer(ctx: AudioContext): AudioBuffer {
-  if (tick && tick.sampleRate === ctx.sampleRate) return tick;
-  const seconds = 0.06;
-  const length = Math.floor(ctx.sampleRate * seconds);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1) {
-    const t = i / ctx.sampleRate;
-    // Fast decay, mostly the first 15 ms, same shape as a UI highlight click.
-    const envelope = Math.exp(-t * 85);
-    data[i] = (Math.random() * 2 - 1) * envelope;
-  }
-  tick = buffer;
-  return buffer;
-}
-
 function startTick(ctx: AudioContext): void {
-  try {
-    playing?.stop();
-  } catch {
-    // The previous tick already finished.
-  }
-  playing = null;
-
-  const source = ctx.createBufferSource();
-  source.buffer = tickBuffer(ctx);
-  const filter = ctx.createBiquadFilter();
-  filter.type = "highpass";
-  filter.frequency.value = 1800;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  gain.gain.value = 0.22;
-  source.connect(filter);
-  filter.connect(gain);
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(988, now);
+  osc.frequency.exponentialRampToValueAtTime(494, now + 0.04);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.045, now + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+  osc.connect(gain);
   gain.connect(ctx.destination);
-  source.onended = () => {
-    if (playing === source) playing = null;
-  };
-  playing = source;
-  source.start();
+  osc.start(now);
+  osc.stop(now + 0.055);
 }
 
 /** Play when the highlighted wedge changes. No sound when the pointer leaves the wheel. */

@@ -145,6 +145,9 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
+- Release 0.1.4: the Done card hides itself, the wheel starts
+  loading at launch so the first drag can open, and the hover
+  tick is a soft click.
 - Release 0.1.3: Ctrl tools, hover tick, Markdown, HTML, CSV,
   TSV, PDF text, and ZIP, TAR, and GZIP.
 

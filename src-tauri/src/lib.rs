@@ -53,6 +53,9 @@ pub fn run() {
             tray::install(app.handle())?;
             picker::register_shortcuts(app.handle());
             dragmon::start(app.handle().clone());
+            // WebView2 has to exist before the first drop, or that drag
+            // finishes while the overlay is still starting.
+            wheel::prepare(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

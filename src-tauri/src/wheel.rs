@@ -51,9 +51,15 @@ struct ShowPayload {
 static VISIBLE: AtomicBool = AtomicBool::new(false);
 static PILL: AtomicBool = AtomicBool::new(false);
 static CREATING: AtomicBool = AtomicBool::new(false);
+static READY: AtomicBool = AtomicBool::new(false);
+/// One mouse-move prewarm is enough until the window is destroyed.
+static NUDGED: AtomicBool = AtomicBool::new(false);
 /// Bumped whenever the overlay is shown or asked to stay, so a delayed
 /// release does not destroy a window that is in use again.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
+/// Separate from GENERATION. Hiding the wheel must not cancel the timer
+/// that removes the Done card.
+static PILL_EPOCH: AtomicU64 = AtomicU64::new(0);
 /// How long a hidden, idle overlay is kept. Long enough that the next
 /// drag is instant, then WebView2 is released.
 const RELEASE_AFTER: Duration = Duration::from_secs(180);
@@ -70,6 +76,19 @@ static PENDING: Mutex<Option<PendingShow>> = Mutex::new(None);
 
 pub fn is_visible() -> bool {
     VISIBLE.load(Ordering::SeqCst)
+}
+
+pub fn is_ready() -> bool {
+    READY.load(Ordering::SeqCst)
+}
+
+/// True once, while the overlay does not exist yet. The drag hook uses this
+/// to start WebView2 on the first mouse move, before the click.
+pub fn claim_nudge() -> bool {
+    if READY.load(Ordering::SeqCst) || CREATING.load(Ordering::SeqCst) {
+        return false;
+    }
+    !NUDGED.swap(true, Ordering::SeqCst)
 }
 
 /// Builds the hidden overlay at startup so showing it later is instant.
@@ -92,6 +111,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .visible(true)
         .build()?;
     let _ = window.hide();
+    READY.store(true, Ordering::SeqCst);
     Ok(())
 }
 
@@ -125,6 +145,7 @@ pub fn prepare(app: &AppHandle) {
             if let Err(error) = create(&handle) {
                 diag::log(&format!("wheel: create failed: {error}"));
                 CREATING.store(false, Ordering::SeqCst);
+                NUDGED.store(false, Ordering::SeqCst);
                 return;
             }
         }
@@ -174,25 +195,26 @@ pub fn show(app: &AppHandle, mode: Mode, cursor: (i32, i32), picker: bool, paths
 }
 
 /// Shows or hides the small conversion card. `hold` keeps the card up
-/// after the job finishes so the result can be read.
+/// after the job finishes so the result can be read, then removes it.
+/// The timer is armed even while the wheel is still open, because a fast
+/// image job finishes before the mouse-up hide.
 pub fn sync_progress(app: &AppHandle, show: bool, hold: bool) {
     if show {
-        let epoch = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
         PILL.store(true, Ordering::SeqCst);
-        if VISIBLE.load(Ordering::SeqCst) {
-            return;
-        }
-        if window(app).is_some() && !CREATING.load(Ordering::SeqCst) {
-            let handle = app.clone();
-            let _ = app.run_on_main_thread(move || show_pill_now(&handle));
-        } else {
-            prepare(app);
+        let epoch = PILL_EPOCH.fetch_add(1, Ordering::SeqCst) + 1;
+        if !VISIBLE.load(Ordering::SeqCst) {
+            if window(app).is_some() && !CREATING.load(Ordering::SeqCst) {
+                let handle = app.clone();
+                let _ = app.run_on_main_thread(move || show_pill_now(&handle));
+            } else {
+                prepare(app);
+            }
         }
         if hold {
             let app = app.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(PILL_HOLD);
-                if GENERATION.load(Ordering::SeqCst) != epoch {
+                if PILL_EPOCH.load(Ordering::SeqCst) != epoch {
                     return;
                 }
                 sync_progress(&app, false, false);
@@ -311,6 +333,8 @@ fn schedule_release(app: &AppHandle, generation: u64) {
                 return;
             }
             if let Some(window) = window(&handle) {
+                READY.store(false, Ordering::SeqCst);
+                NUDGED.store(false, Ordering::SeqCst);
                 let _ = window.destroy();
             }
         });

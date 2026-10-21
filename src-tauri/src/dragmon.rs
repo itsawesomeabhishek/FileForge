@@ -32,7 +32,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, GA_ROOT, GetAncestor, GetClassNameW, GetCursorPos, GetMessageW,
     GetWindowThreadProcessId, KBDLLHOOKSTRUCT, MSG, MSLLHOOKSTRUCT, SetWindowsHookExW,
-    WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_SYSKEYDOWN,
+    WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_SYSKEYDOWN,
     WM_SYSKEYUP, WindowFromPoint,
 };
 use windows::core::PWSTR;
@@ -92,6 +92,8 @@ pub fn exceeds_threshold(start: (i32, i32), now: (i32, i32)) -> bool {
 enum MouseEvent {
     Down(i32, i32),
     Up,
+    /// Start the overlay before the click, so the first drag can land on it.
+    Nudge,
 }
 
 static EVENTS: OnceLock<Sender<MouseEvent>> = OnceLock::new();
@@ -214,6 +216,11 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
                 WM_LBUTTONUP => {
                     let _ = sender.send(MouseEvent::Up);
                 }
+                WM_MOUSEMOVE => {
+                    if !wheel::is_ready() && wheel::claim_nudge() {
+                        let _ = sender.send(MouseEvent::Nudge);
+                    }
+                }
                 _ => {}
             }
         }
@@ -306,6 +313,10 @@ fn controller(app: AppHandle, events: Receiver<MouseEvent>) {
 
 fn on_event(app: &AppHandle, state: State, event: MouseEvent) -> State {
     match event {
+        MouseEvent::Nudge => {
+            wheel::prepare(app);
+            state
+        }
         MouseEvent::Down(x, y) => {
             if matches!(state, State::Active { .. } | State::Releasing { .. }) {
                 wheel::hide(app);
