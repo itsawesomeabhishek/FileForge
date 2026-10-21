@@ -22,9 +22,10 @@ uploaded; every operation runs on the user's machine.
 ## Core User Flow
 
 1. User launches FileForge; it sits in the system tray.
-2. User holds Shift while dragging files from Explorer or the
-   desktop (or presses Ctrl+Alt+O / uses the tray menu to pick
-   files). There is no main window; Settings opens from the tray.
+2. User drags files from Explorer or the desktop and presses
+   Shift to convert or Ctrl for image tools (or presses
+   Ctrl+Alt+O / uses the tray menu to pick files). There is no
+   main window; Settings opens from the tray.
 3. A radial wheel lists the targets common to all the files.
 4. Dropping on a wedge starts the conversion.
 5. Jobs run one at a time; the output appears next to the
@@ -39,7 +40,10 @@ uploaded; every operation runs on the user's machine.
 - Audio: mp3, m4a, wav, flac, ogg, opus, aiff, wma.
 - Video: mp4, mov, mkv, webm, avi, wmv, gif; video to mp3.
 - Subtitles: srt, vtt, and subtitle to txt; txt to srt/vtt.
-- Text: txt to pdf.
+- Text: txt, markdown, and html, including pdf output. PDF
+  input keeps the text layer.
+- Spreadsheets: csv and tsv, including pdf output.
+- Archives: zip, tar, and gzip (written as .tar.gz).
 
 ### App shell
 
@@ -55,14 +59,36 @@ uploaded; every operation runs on the user's machine.
 
 - Phase 1: everything listed under Features above.
 
+### In progress, from the Tangerine set
+
+Shift opens convert. Ctrl opens tools (Tangerine uses Command
+for that wheel). The wheel stays open until the drop. A mixed
+selection has no tools. File actions stay a later wheel.
+
+Working on Ctrl, when every file is the same kind:
+
+- Images: Compress, Metadata, Add background.
+- Video and GIF: Compress, Mute, Snapshot, Metadata.
+- Audio: Compress, Normalize, Mono, Metadata, Visualize.
+
+Still needs an editor window, so it is not on the wheel: image
+crop, redact, edit, annotate; video redact, trim, speed, crop,
+split; audio trim, bleep, and a channel picker.
+
+PDF text and markdown are on the Shift wheel. PDF pages as
+images, DOCX, Pages, PPTX, XLSX, ODS, EPUB, and RAR are not,
+because FileForge cannot write those files yet. HEIC can be
+read, not written. Pages, AirDrop, and Float are Mac-only.
+
 ### Out of Scope
 
-- Phase 1 excludes the editing tools (compress, metadata,
-  photo edit, crop, redact, resize, rotate, collage, PDF
-  merge/split/organize, video trim/crop/speed/join/frames/
-  split, audio normalize/trim/channels/bleep). They are later
-  phases, one feature unit each.
-- Archive conversions (disabled in the macOS app too).
+- Phase 1 excludes the editing tools that are not listed as
+  working above (photo edit, crop, redact, resize, rotate,
+  collage, PDF merge/split/organize, video trim/crop/speed/
+  join/frames/split, audio trim/bleep). They are later phases,
+  one feature unit each. Audio normalize, mono, and waveform
+  video are on the Ctrl wheel.
+- RAR input. ZIP, TAR, and GZIP convert to each other.
 - docx output and pdf to image/docx/txt (deferred, hidden
   rather than offered and failing).
 - The macOS Shift-drag radial menu and notch pill, which have

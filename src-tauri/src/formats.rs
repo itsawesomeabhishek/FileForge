@@ -42,6 +42,10 @@ pub enum FileFormat {
     Pdf,
     Docx,
     Txt,
+    Md,
+    Html,
+    Csv,
+    Tsv,
     Srt,
     Vtt,
     Zip,
@@ -51,7 +55,7 @@ pub enum FileFormat {
 }
 
 impl FileFormat {
-    pub const ALL: [FileFormat; 32] = [
+    pub const ALL: [FileFormat; 36] = [
         Self::Jpg,
         Self::Png,
         Self::Webp,
@@ -78,6 +82,10 @@ impl FileFormat {
         Self::Pdf,
         Self::Docx,
         Self::Txt,
+        Self::Md,
+        Self::Html,
+        Self::Csv,
+        Self::Tsv,
         Self::Srt,
         Self::Vtt,
         Self::Zip,
@@ -126,7 +134,9 @@ impl FileFormat {
             Self::Mp4 | Self::Mov | Self::Mkv | Self::Webm | Self::Avi | Self::Wmv => {
                 FormatCategory::Video
             }
-            Self::Pdf | Self::Docx | Self::Txt => FormatCategory::Document,
+            Self::Pdf | Self::Docx | Self::Txt | Self::Md | Self::Html | Self::Csv | Self::Tsv => {
+                FormatCategory::Document
+            }
             Self::Srt | Self::Vtt => FormatCategory::Subtitle,
             Self::Zip | Self::Tar | Self::Gz | Self::Rar => FormatCategory::Archive,
         }
@@ -160,6 +170,10 @@ impl FileFormat {
             Self::Pdf => "pdf",
             Self::Docx => "docx",
             Self::Txt => "txt",
+            Self::Md => "md",
+            Self::Html => "html",
+            Self::Csv => "csv",
+            Self::Tsv => "tsv",
             Self::Srt => "srt",
             Self::Vtt => "vtt",
             Self::Zip => "zip",
@@ -192,7 +206,11 @@ impl FileFormat {
             Self::Mp4 => &["mp4", "m4v"],
             Self::Mov => &["mov", "qt"],
             Self::Gz => &["gz", "tgz"],
-            Self::Txt => &["txt", "text", "md", "log"],
+            Self::Txt => &["txt", "text", "log"],
+            Self::Md => &["md", "markdown"],
+            Self::Html => &["html", "htm"],
+            Self::Csv => &["csv"],
+            Self::Tsv => &["tsv"],
             Self::Aiff => &["aiff", "aif"],
             Self::Png => &["png"],
             Self::Webp => &["webp"],
@@ -247,7 +265,9 @@ mod tests {
         assert_eq!(FileFormat::detect(Path::new("a.JPEG")), Some(FileFormat::Jpg));
         assert_eq!(FileFormat::detect(Path::new("a.tif")), Some(FileFormat::Tiff));
         assert_eq!(FileFormat::detect(Path::new("a.m4v")), Some(FileFormat::Mp4));
-        assert_eq!(FileFormat::detect(Path::new("a.md")), Some(FileFormat::Txt));
+        assert_eq!(FileFormat::detect(Path::new("a.md")), Some(FileFormat::Md));
+        assert_eq!(FileFormat::detect(Path::new("a.csv")), Some(FileFormat::Csv));
+        assert_eq!(FileFormat::detect(Path::new("a.htm")), Some(FileFormat::Html));
         assert_eq!(FileFormat::detect(Path::new("a.tar.gz")), Some(FileFormat::Gz));
         assert_eq!(FileFormat::detect(Path::new("a.xyz")), None);
         assert_eq!(FileFormat::detect(Path::new("noext")), None);

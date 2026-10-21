@@ -52,6 +52,19 @@ export const availableTargets = (formats: string[]) =>
 export const convertFiles = (paths: string[], target: string) =>
   invoke<void>("convert_files", { paths, target });
 
+export type FileTool =
+  | "compress"
+  | "metadata"
+  | "background"
+  | "mute"
+  | "snapshot"
+  | "normalize"
+  | "mono"
+  | "visualize";
+
+export const applyFileTool = (paths: string[], tool: FileTool) =>
+  invoke<void>("apply_file_tool", { paths, tool });
+
 export type JobStatus = "waiting" | "running" | "done" | "cancelled" | "failed";
 
 export interface JobInfo {

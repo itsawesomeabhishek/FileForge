@@ -59,6 +59,7 @@ pub fn run() {
             commands::probe_files,
             commands::available_targets,
             commands::convert_files,
+            commands::apply_file_tool,
             commands::list_jobs,
             commands::cancel_job,
             commands::cancel_all_jobs,

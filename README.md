@@ -1,9 +1,9 @@
 # FileForge
 
 Convert a file by dropping it on a wheel. FileForge sits in the Windows
-system tray. Hold **Shift**, drag a file out of Explorer or off the
-desktop, and a wheel of formats appears under the cursor. Drop the file
-on a wedge and the new file is written next to the original.
+system tray. Drag a file out of Explorer or off the desktop, then press
+**Shift** to convert it or **Ctrl** for image tools. Drop the file on a
+wedge and the new file is written next to the original.
 
 Nothing is uploaded. The original is never changed, moved, or overwritten.
 The wheel starts loading as soon as you press the mouse button, and a
@@ -21,7 +21,7 @@ closes so FileForge does not keep a browser engine running in the tray.
 ## Install
 
 1. Download
-   [`FileForge_0.1.2_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
+   [`FileForge_0.1.3_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
    and run it.
 2. You need Windows 10 or 11, 64-bit. WebView2 is already on current
    Windows 11.
@@ -41,10 +41,13 @@ To remove it, use **Settings > Apps > Installed apps**.
 ## Convert a file
 
 1. Select one or more files in Explorer, or on the desktop.
-2. Hold **Shift**, then drag. Keep Shift held.
+2. Start dragging, then press **Shift**. You can also hold Shift before
+   the drag. The wheel stays open until you drop, even if you let go of
+   the key.
 3. The wheel opens on the monitor under the cursor. Each wedge is one
    format every selected file can become.
-4. Move the pointer onto a wedge. It highlights.
+4. Move the pointer onto a wedge. It highlights, and a short tick plays
+   each time you move to a different wedge.
 5. Release the mouse on that wedge.
 
 `photo.png` dropped on **JPG** becomes `photo.jpg` in the same folder.
@@ -57,6 +60,20 @@ If that name already exists, the new file is `photo 2.jpg`, then
 
 Release the mouse anywhere that is not a wedge, including the middle of
 the wheel, and nothing is converted.
+
+## File tools
+
+Press **Ctrl** instead of Shift. The wheel follows the kind of file
+you dragged, and every tool writes a new file beside the original.
+
+- Images: Compress, Metadata, Add background.
+- Video, including GIF: Compress, Mute, Snapshot, Metadata.
+- Audio: Compress, Normalize, Mono, Metadata, Visualize (an MP4 of the waveform).
+
+A drag that mixes images with video, or a PDF, has no tools yet.
+Crop, trim, redact, speed, split, and bleep need their own window.
+PDF, Word, Pages, slides, spreadsheets, and EPUB are not on the wheel
+until FileForge can write those files.
 
 The wheel only lists formats that work for **every** file in the drag.
 A PNG and a WAV dragged together have no format in common, so the wheel
@@ -105,7 +122,7 @@ Other settings:
 | Setting | What it does |
 |---|---|
 | Start FileForge when I sign in | Adds it to Windows startup |
-| Open the wheel when I hold Shift… | Turns the drag gesture on or off |
+| Open the wheel when I press Shift or Ctrl… | Turns the drag gesture on or off. Shift converts. Ctrl opens image tools |
 | Ignore drags from these apps | One `.exe` name per line. Drags that start in those programs never open the wheel |
 | JPEG quality | Used when the target is JPG. Default is high |
 | FFmpeg | Shows whether the bundled converter is working. You can point this at your own `ffmpeg.exe` |
@@ -121,7 +138,9 @@ format a file already is.
 | Audio: mp3, m4a, wav, flac, ogg, opus, aiff, wma | any other audio format in that list |
 | Video: mp4, mov, mkv, webm, avi, wmv | any other video format in that list, plus gif and mp3 |
 | Subtitles: srt, vtt | srt, vtt, txt |
-| Text: txt | pdf |
+| Text: txt, md, html | txt, md, html, pdf. PDF input keeps the text layer |
+| Spreadsheets: csv, tsv | csv, tsv, pdf |
+| Archives: zip, tar, gzip | zip, tar, gzip (gzip is a .tar.gz) |
 
 Audio, video, gif output, and HEIC or AVIF input use the FFmpeg build
 that is inside the installer. You do not install FFmpeg yourself.
@@ -135,13 +154,14 @@ that is inside the installer. You do not install FFmpeg yourself.
 | Show Logs | Opens the log, if a conversion failed and you want the reason |
 | Quit FileForge | Exits. The wheel will not appear again until you start it |
 
-## One Shift shortcut changes
+## Two Explorer shortcuts change
 
 While the wheel is turned on, **Shift+click** in Explorer selects only the
 file you clicked. Windows normally uses Shift+click to select a range.
-FileForge takes that click so a Shift-drag does not select everything
-between two files. Turn the wheel off in Settings if you want range
-selection back. Ctrl+click still adds and removes individual files.
+**Ctrl+click** also selects only that file, instead of adding or removing
+it from the selection. FileForge takes those clicks so a drag does not
+change which files are selected before the wheel opens. Turn the wheel
+off in Settings if you want the usual Explorer selection back.
 
 ## Develop
 

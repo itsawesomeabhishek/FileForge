@@ -1,3 +1,4 @@
+pub mod archive;
 pub mod audio;
 pub mod document;
 pub mod images;
@@ -6,6 +7,7 @@ mod integration_tests;
 pub mod pdf;
 pub mod subtitle;
 pub mod text;
+pub mod tools;
 pub mod video;
 
 use std::path::PathBuf;
@@ -63,10 +65,11 @@ pub fn is_available(from: FileFormat, to: FileFormat, encoders: &std::collection
 }
 
 /// Order matters: the first engine that supports a pair wins.
-static ENGINES: [&dyn ConversionEngine; 5] = [
+static ENGINES: [&dyn ConversionEngine; 6] = [
     &images::ImageEngine,
     &audio::AudioEngine,
     &video::VideoEngine,
+    &archive::ArchiveEngine,
     &document::DocumentEngine,
     &subtitle::SubtitleEngine,
 ];

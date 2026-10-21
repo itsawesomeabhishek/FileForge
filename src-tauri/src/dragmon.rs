@@ -4,7 +4,8 @@
 //! A low-level mouse hook only forwards button down/up (it must return
 //! quickly). A controller thread owns the state machine and polls the
 //! cursor and modifier keys at ~60 Hz while a candidate drag is active, so
-//! the modifier can change mid-drag.
+//! the modifier can change mid-drag. Once the wheel is open it stays up
+//! until the mouse button is released, even if the key is let go.
 //!
 //! Windows has no global drag pasteboard, so the hook cannot know whether
 //! files are really being dragged. The wheel window is shown once the
@@ -25,8 +26,8 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT, KEYEVENTF_KEYUP,
-    MOUSEEVENTF_LEFTDOWN, MOUSEINPUT, SendInput, VIRTUAL_KEY, VK_CONTROL, VK_LBUTTON, VK_LSHIFT,
-    VK_MENU, VK_RSHIFT,
+    MOUSEEVENTF_LEFTDOWN, MOUSEINPUT, SendInput, VIRTUAL_KEY, VK_LBUTTON, VK_LCONTROL, VK_LSHIFT,
+    VK_RCONTROL, VK_RSHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, GA_ROOT, GetAncestor, GetClassNameW, GetCursorPos, GetMessageW,
@@ -50,7 +51,7 @@ const RELEASE_GRACE: Duration = Duration::from_millis(350);
 /// Modes whose wheel has content. Tools and file actions are added to this
 /// list as those phases land.
 fn mode_enabled(mode: Mode) -> bool {
-    matches!(mode, Mode::Convert)
+    matches!(mode, Mode::Convert | Mode::Tools)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -60,13 +61,15 @@ pub struct Modifiers {
     pub ctrl: bool,
 }
 
-/// Shift = convert, Alt+Shift = tools, Ctrl+Shift = file actions.
+/// Shift = convert. Ctrl = image tools. Ctrl wins when both are held,
+/// so pressing Ctrl during a convert drag switches to tools.
 pub fn mode_for(mods: Modifiers) -> Option<Mode> {
-    match (mods.shift, mods.alt, mods.ctrl) {
-        (true, false, false) => Some(Mode::Convert),
-        (true, true, false) => Some(Mode::Tools),
-        (true, false, true) => Some(Mode::Actions),
-        _ => None,
+    if mods.ctrl {
+        Some(Mode::Tools)
+    } else if mods.shift {
+        Some(Mode::Convert)
+    } else {
+        None
     }
 }
 
@@ -101,27 +104,37 @@ const MARKER: usize = 0x4558_504C;
 /// keyboard hook. It is separate from the system key state because the
 /// mouse hook briefly releases Shift for Explorer (see `hook_proc`).
 static SHIFT_KEYS: AtomicU8 = AtomicU8::new(0);
+/// Physical Ctrl state (bit 0 = left, bit 1 = right), tracked the same way
+/// so a replayed click can release Ctrl without FileForge losing it.
+static CTRL_KEYS: AtomicU8 = AtomicU8::new(0);
 
 fn shift_held() -> bool {
     SHIFT_KEYS.load(Ordering::SeqCst) != 0
+}
+
+fn ctrl_held() -> bool {
+    CTRL_KEYS.load(Ordering::SeqCst) != 0
 }
 
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if code >= 0 {
         let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
         if info.dwExtraInfo != MARKER {
-            let bit = match VIRTUAL_KEY(info.vkCode as u16) {
-                VK_LSHIFT => 1,
-                VK_RSHIFT => 2,
-                _ => 0,
+            let vk = VIRTUAL_KEY(info.vkCode as u16);
+            let tracked = match vk {
+                VK_LSHIFT => Some((&SHIFT_KEYS, 1u8)),
+                VK_RSHIFT => Some((&SHIFT_KEYS, 2)),
+                VK_LCONTROL => Some((&CTRL_KEYS, 1)),
+                VK_RCONTROL => Some((&CTRL_KEYS, 2)),
+                _ => None,
             };
-            if bit != 0 {
+            if let Some((keys, bit)) = tracked {
                 match wparam.0 as u32 {
                     WM_KEYDOWN | WM_SYSKEYDOWN => {
-                        SHIFT_KEYS.fetch_or(bit, Ordering::SeqCst);
+                        keys.fetch_or(bit, Ordering::SeqCst);
                     }
                     WM_KEYUP | WM_SYSKEYUP => {
-                        SHIFT_KEYS.fetch_and(!bit, Ordering::SeqCst);
+                        keys.fetch_and(!bit, Ordering::SeqCst);
                     }
                     _ => {}
                 }
@@ -131,12 +144,12 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
     unsafe { CallNextHookEx(None, code, wparam, lparam) }
 }
 
-/// Presses the left button as if Shift were not held. Explorer applies
-/// Shift+click as a range selection at mouse-down, so a Shift-drag would
-/// otherwise select every file between the last selection and the one
-/// being dragged. Shift stays physically held; only the system's view of
-/// it is cleared for this one click.
-unsafe fn press_without_shift() -> bool {
+/// Presses the left button as if Shift and Ctrl were not held. Explorer
+/// applies Shift+click as a range selection and Ctrl+click as a toggle, so
+/// either key at mouse-down would change the selection before the drag
+/// starts. The keys stay physically held; only the system's view of them
+/// is cleared for this one click.
+unsafe fn press_without_modifiers() -> bool {
     let key = |vk: VIRTUAL_KEY| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
@@ -149,13 +162,20 @@ unsafe fn press_without_shift() -> bool {
             },
         },
     };
-    let mut inputs: Vec<INPUT> = Vec::with_capacity(3);
-    let keys = SHIFT_KEYS.load(Ordering::SeqCst);
-    if keys & 1 != 0 {
+    let mut inputs: Vec<INPUT> = Vec::with_capacity(5);
+    let shift = SHIFT_KEYS.load(Ordering::SeqCst);
+    let ctrl = CTRL_KEYS.load(Ordering::SeqCst);
+    if shift & 1 != 0 {
         inputs.push(key(VK_LSHIFT));
     }
-    if keys & 2 != 0 {
+    if shift & 2 != 0 {
         inputs.push(key(VK_RSHIFT));
+    }
+    if ctrl & 1 != 0 {
+        inputs.push(key(VK_LCONTROL));
+    }
+    if ctrl & 2 != 0 {
+        inputs.push(key(VK_RCONTROL));
     }
     inputs.push(INPUT {
         r#type: INPUT_MOUSE,
@@ -182,10 +202,10 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
                 WM_LBUTTONDOWN => {
                     let point = (info.pt.x, info.pt.y);
                     let ours = info.dwExtraInfo == MARKER;
-                    let plain_shift = shift_held() && !key_down(VK_CONTROL) && !key_down(VK_MENU);
-                    if !ours && plain_shift && allowed_source(point) {
-                        // Swallow the real press and replay it without Shift.
-                        if unsafe { press_without_shift() } {
+                    let wheel_key = shift_held() || ctrl_held();
+                    if !ours && wheel_key && allowed_source(point) {
+                        // Swallow the real press and replay it without Shift or Ctrl.
+                        if unsafe { press_without_modifiers() } {
                             return LRESULT(1);
                         }
                     }
@@ -223,6 +243,14 @@ pub fn start(app: AppHandle) {
                 keys |= 2;
             }
             SHIFT_KEYS.store(keys, Ordering::SeqCst);
+            let mut ctrl = 0;
+            if key_down(VK_LCONTROL) {
+                ctrl |= 1;
+            }
+            if key_down(VK_RCONTROL) {
+                ctrl |= 2;
+            }
+            CTRL_KEYS.store(ctrl, Ordering::SeqCst);
             if let Err(error) = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), module, 0) {
                 diag::log(&format!("drag monitor: keyboard hook failed: {error}"));
             }
@@ -338,18 +366,12 @@ fn tick(app: &AppHandle, state: State) -> State {
                 };
             }
             match mode_for(read_modifiers()) {
-                Some(next) if mode_enabled(next) => {
-                    if next != mode {
-                        wheel::set_mode(app, next);
-                    }
+                Some(next) if mode_enabled(next) && next != mode => {
+                    wheel::set_mode(app, next);
                     State::Active { start, mode: next }
                 }
-                _ => {
-                    // Modifier released mid-drag: the drag carries on as a
-                    // normal Explorer drag.
-                    wheel::hide(app);
-                    State::Candidate { start }
-                }
+                // The tapped key can be released. The wheel stays until the drop.
+                _ => State::Active { start, mode },
             }
         }
     }
@@ -435,8 +457,8 @@ fn button_down() -> bool {
 fn read_modifiers() -> Modifiers {
     Modifiers {
         shift: shift_held(),
-        alt: key_down(VK_MENU),
-        ctrl: key_down(VK_CONTROL),
+        alt: false,
+        ctrl: ctrl_held(),
     }
 }
 
@@ -457,16 +479,15 @@ mod tests {
     #[test]
     fn maps_modifiers_to_modes() {
         assert_eq!(mode_for(mods(true, false, false)), Some(Mode::Convert));
-        assert_eq!(mode_for(mods(true, true, false)), Some(Mode::Tools));
-        assert_eq!(mode_for(mods(true, false, true)), Some(Mode::Actions));
+        assert_eq!(mode_for(mods(false, false, true)), Some(Mode::Tools));
+        assert_eq!(mode_for(mods(true, false, true)), Some(Mode::Tools));
+        assert_eq!(mode_for(mods(true, true, true)), Some(Mode::Tools));
     }
 
     #[test]
     fn other_combinations_open_nothing() {
         assert_eq!(mode_for(mods(false, false, false)), None);
         assert_eq!(mode_for(mods(false, true, false)), None);
-        assert_eq!(mode_for(mods(false, false, true)), None);
-        assert_eq!(mode_for(mods(true, true, true)), None);
     }
 
     #[test]

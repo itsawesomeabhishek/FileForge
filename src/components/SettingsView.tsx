@@ -132,12 +132,15 @@ export default function SettingsView() {
             onChange={(e) => commit({ ...settings, wheelEnabled: e.target.checked })}
           />
           <span className="setting-label">
-            Open the wheel when I hold Shift while dragging files from Explorer or the desktop
+            Open the wheel when I drag files from Explorer or the desktop and press Shift or Ctrl
           </span>
         </label>
         <p className="setting-note muted">
-          Shift opens the convert wheel. You can also press Ctrl+Alt+O to pick files and open it.
-          While this is on, Shift+click in Explorer selects only the clicked file instead of a range.
+          Shift opens convert. Ctrl opens tools for images, video, and audio:
+          compress, metadata, mute, snapshot, normalize, mono, and a waveform video.
+          Press the key before or during the drag. The wheel stays open until you drop.
+          You can also press Ctrl+Alt+O to pick files and open the convert wheel.
+          While this is on, Shift+click and Ctrl+click in Explorer select only the clicked file.
         </p>
         <label className="setting">
           <span className="setting-label">Ignore drags from these apps (one .exe per line)</span>

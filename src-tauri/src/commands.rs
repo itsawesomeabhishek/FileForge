@@ -6,6 +6,7 @@ use tauri_plugin_autostart::ManagerExt;
 
 use crate::diag;
 use crate::engines;
+use crate::engines::tools::FileTool;
 use crate::ffmpeg::{self, Health};
 use crate::formats::{FileFormat, FormatCategory};
 use crate::jobs::{JobInfo, JobQueue};
@@ -75,6 +76,17 @@ pub async fn available_targets(formats: Vec<FileFormat>) -> Vec<TargetInfo> {
             format,
         })
         .collect()
+}
+
+#[tauri::command]
+pub fn apply_file_tool(
+    paths: Vec<String>,
+    tool: FileTool,
+    queue: State<'_, JobQueue>,
+    settings: State<'_, SettingsStore>,
+) {
+    let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+    queue.apply_file_tool(paths, tool, &settings);
 }
 
 #[tauri::command]

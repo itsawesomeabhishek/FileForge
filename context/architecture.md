@@ -27,7 +27,10 @@
 - `src-tauri/src/tray.rs` - tray icon and menu.
 - `src-tauri/src/dragmon.rs` - low-level mouse hook plus a
   controller thread; decides when a modifier-drag from Explorer or
-  the desktop should open the wheel.
+  the desktop should open the wheel. Shift opens convert. Ctrl
+  opens image, video, and audio tools, which write a new file and
+  leave the original. Once open, the wheel stays until the mouse
+  button is released.
 - `src-tauri/src/wheel.rs` - the full-monitor overlay window
   and its show/hide/mode events. Loading starts at mouse-down,
   before the drag threshold, so the first drop has a window to

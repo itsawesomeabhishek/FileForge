@@ -23,16 +23,23 @@ fn listed_targets(source: FileFormat) -> Vec<FileFormat> {
             v
         }
         Gif => FileFormat::VIDEO.to_vec(),
-        Pdf => vec![Docx, Jpg, Png, Txt],
-        Txt => vec![Pdf, Jpg, Png, Srt, Vtt],
+        Pdf => vec![Txt, Md],
+        Txt => vec![Pdf, Html, Md, Srt, Vtt],
+        Md => vec![Txt, Html, Pdf],
+        Html => vec![Txt, Md, Pdf],
+        Csv => vec![Tsv, Pdf],
+        Tsv => vec![Csv, Pdf],
         Srt | Vtt => {
             let mut v = FileFormat::SUBTITLES.to_vec();
             v.push(Txt);
             v
         }
-        // Archive engine is disabled; do not offer operations that always fail.
-        Zip | Tar | Gz | Rar => vec![],
-        Docx => vec![],
+        Zip => vec![Tar, Gz],
+        Tar => vec![Zip, Gz],
+        Gz => vec![Zip, Tar],
+        // RAR needs a separate unpacker. DOCX, Pages, slides, and XLSX
+        // are not offered until an engine can write them.
+        Rar | Docx => vec![],
     };
     list.retain(|target| *target != source);
     list
@@ -97,6 +104,28 @@ pub fn output_path(
     directory.join(candidate)
 }
 
+/// `name label.ext`, then `name label 2.ext`, without touching the original.
+pub fn named_output(
+    source: &Path,
+    label: &str,
+    extension: &str,
+    directory: &Path,
+    existing: &HashSet<String>,
+) -> PathBuf {
+    let file_name = source
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let base = stripped_base_name(&file_name);
+    let mut candidate = format!("{base} {label}.{extension}");
+    let mut counter = 2;
+    while existing.contains(&candidate) || directory.join(&candidate).exists() {
+        candidate = format!("{base} {label} {counter}.{extension}");
+        counter += 1;
+    }
+    directory.join(candidate)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,10 +149,21 @@ mod tests {
     }
 
     #[test]
-    fn archives_and_docx_offer_nothing() {
-        for format in [Zip, Tar, Gz, Rar, Docx] {
-            assert!(targets_for(format).is_empty(), "{format:?}");
-        }
+    fn archives_convert_between_zip_tar_and_gzip() {
+        assert_eq!(targets_for(Zip), vec![Tar, Gz]);
+        assert_eq!(targets_for(Tar), vec![Zip, Gz]);
+        assert_eq!(targets_for(Gz), vec![Zip, Tar]);
+        assert!(targets_for(Rar).is_empty());
+        assert!(targets_for(Docx).is_empty());
+    }
+
+    #[test]
+    fn documents_and_spreadsheets_offer_text_targets() {
+        assert!(targets_for(Pdf).contains(&Txt));
+        assert!(targets_for(Md).contains(&Html));
+        assert!(targets_for(Csv).contains(&Tsv));
+        assert!(targets_for(Tsv).contains(&Pdf));
+        assert!(!targets_for(Pdf).contains(&Docx));
     }
 
     #[test]
@@ -183,6 +223,16 @@ mod tests {
         reserved.insert("song 2.mp3".to_string());
         let second = output_path(Path::new("song.wav"), Mp3, &dir, &reserved);
         assert_eq!(second.file_name().unwrap(), "song 3.mp3");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn named_output_adds_a_label_and_avoids_collisions() {
+        let dir = std::env::temp_dir().join(format!("fileforge-named-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("photo compressed.jpg"), b"x").unwrap();
+        let first = named_output(Path::new("photo.png"), "compressed", "jpg", &dir, &HashSet::new());
+        assert_eq!(first.file_name().unwrap(), "photo compressed 2.jpg");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

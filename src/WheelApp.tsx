@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  applyFileTool,
   availableTargets,
   convertFiles,
   listJobs,
@@ -12,12 +13,14 @@ import {
   probeFiles,
   wheelHide,
   type FileInfo,
+  type FileTool,
   type JobInfo,
   type TargetInfo,
   type WheelMode,
   type WheelShow,
 } from "./api";
 import { CategoryIcon } from "./components/icons";
+import { playHighlight } from "./highlightSound";
 import { DISC_RADIUS, RadialGeometry, type Point } from "./radial";
 import "./wheel.css";
 
@@ -54,6 +57,37 @@ function trace(event: string, detail?: unknown) {
   if (log.length > 100) log.shift();
 }
 
+function toolsFor(files: FileInfo[] | null, pathCount: number) {
+  if (files === null || files.length === 0 || files.length !== pathCount) return [];
+  const category = files[0].category;
+  if (!category || files.some((file) => file.category !== category || file.format === null)) return [];
+  if (category === "image") {
+    return [
+      { id: "compress", label: "COMPRESS", category },
+      { id: "metadata", label: "METADATA", category },
+      { id: "background", label: "ADD BG", category },
+    ];
+  }
+  if (category === "video") {
+    return [
+      { id: "compress", label: "COMPRESS", category },
+      { id: "mute", label: "MUTE", category },
+      { id: "snapshot", label: "SNAPSHOT", category },
+      { id: "metadata", label: "METADATA", category },
+    ];
+  }
+  if (category === "audio") {
+    return [
+      { id: "compress", label: "COMPRESS", category },
+      { id: "normalize", label: "NORMALIZE", category },
+      { id: "mono", label: "MONO", category },
+      { id: "metadata", label: "METADATA", category },
+      { id: "visualize", label: "VISUALIZE", category },
+    ];
+  }
+  return [];
+}
+
 function emptyMessage(
   mode: WheelMode,
   count: number,
@@ -84,7 +118,7 @@ function ProgressCard({ jobs }: { jobs: JobInfo[] }) {
     current.status === "done"
       ? "Done"
       : current.status === "failed"
-        ? "Could not convert"
+        ? "Could not finish"
         : current.status === "cancelled"
           ? "Cancelled"
           : current.status === "waiting"
@@ -132,8 +166,11 @@ export default function WheelApp() {
     pointer.current = null;
   }, []);
 
-  // Tools and file actions have no entries yet, so only conversions fill the wheel.
-  const items = session?.mode === "convert" ? targets : [];
+  const toolItems = toolsFor(files, paths.length);
+  const items =
+    session?.mode === "tools"
+      ? toolItems
+      : targets.map((target) => ({ id: target.format, label: target.label, category: target.category }));
   const geometry = useMemo(() => new RadialGeometry(items.length), [items.length]);
   const convertible = useMemo(() => (files ?? []).filter((file) => file.format !== null), [files]);
   const unsupported = files !== null && (files.length < paths.length || convertible.length < files.length);
@@ -180,6 +217,11 @@ export default function WheelApp() {
   // Items can change under a stationary pointer.
   useEffect(() => hitTest(pointer.current), [hitTest]);
 
+  // One tick each time the pointer or keyboard lands on a different wedge.
+  useEffect(() => {
+    if (hover !== null && !pill) playHighlight();
+  }, [hover, pill]);
+
   const finish = useCallback(() => {
     reset();
     void wheelHide();
@@ -188,13 +230,17 @@ export default function WheelApp() {
   const choose = useCallback(
     (index: number | null, dropped: string[] = []) => {
       const item = index === null ? undefined : items[index];
-      const source = convertible.length > 0 ? convertible.map((file) => file.path) : dropped;
+      const source = paths.length > 0 ? paths : dropped;
       if (item && source.length > 0) {
-        convertFiles(source, item.format).catch((error) => console.error("convert failed", error));
+        const run =
+          session?.mode === "tools"
+            ? applyFileTool(source, item.id as FileTool)
+            : convertFiles(convertible.length > 0 ? convertible.map((file) => file.path) : source, item.id);
+        run.catch((error) => console.error("wheel action failed", error));
       }
       finish();
     },
-    [convertible, finish, items],
+    [convertible, finish, items, paths, session?.mode],
   );
 
   // Latest-state handle for the long-lived drag subscription.
@@ -341,7 +387,7 @@ export default function WheelApp() {
                   const push = selected ? 4 / geometry.labelRadius : 0;
                   return (
                     <path
-                      key={item.format}
+                      key={item.id}
                       d={geometry.wedgePath(index)}
                       className={`wheel-wedge${selected ? " is-selected" : ""}`}
                       style={{
@@ -359,7 +405,7 @@ export default function WheelApp() {
                 const push = selected ? 4 / geometry.labelRadius : 0;
                 return (
                   <div
-                    key={item.format}
+                    key={item.id}
                     className={`wheel-label${selected ? " is-selected" : ""}${dense ? " is-dense" : ""}`}
                     style={{
                       left: DISC_RADIUS + mid.x * (1 + push),

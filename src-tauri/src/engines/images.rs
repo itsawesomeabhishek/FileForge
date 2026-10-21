@@ -4,7 +4,10 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 
 use image::codecs::jpeg::JpegEncoder;
+use image::ImageEncoder;
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use serde::{Deserialize, Serialize};
 use image::metadata::Orientation;
 use image::{DynamicImage, ExtendedColorType, ImageDecoder, ImageFormat, ImageReader, RgbImage, RgbaImage};
 
@@ -14,6 +17,35 @@ use crate::ffmpeg::{self, CancelToken, ProgressFn};
 use crate::formats::{FileFormat, FormatCategory};
 
 pub struct ImageEngine;
+
+/// Image tools offered on the Ctrl wheel. Crop, redact, edit, and
+/// annotate need their own editor and are not offered until that exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImageTool {
+    Compress,
+    Metadata,
+    Background,
+}
+
+impl ImageTool {
+    /// Extension of the new file. Metadata keeps a format this engine can write.
+    pub fn extension(self, source: FileFormat) -> &'static str {
+        match self {
+            Self::Background => "jpg",
+            Self::Compress => match source {
+                FileFormat::Png | FileFormat::Webp | FileFormat::Gif => "png",
+                _ => "jpg",
+            },
+            Self::Metadata => match source {
+                FileFormat::Jpg | FileFormat::Png | FileFormat::Webp | FileFormat::Tiff | FileFormat::Bmp => {
+                    source.file_extension()
+                }
+                _ => "png",
+            },
+        }
+    }
+}
 
 /// Targets this engine can write. HEIC is intentionally absent: neither the
 /// image crate nor the bundled FFmpeg can encode it.
@@ -84,6 +116,58 @@ impl ConversionEngine for ImageEngine {
         progress(1.0);
         Ok(())
     }
+}
+
+pub fn apply_image_tool(
+    source: &Path,
+    format: FileFormat,
+    tool: ImageTool,
+    destination: &Path,
+    progress: &ProgressFn,
+    cancel: &CancelToken,
+) -> Result<()> {
+    let decoded = decode(source, format, progress, cancel)?;
+    progress(0.55);
+    cancel.check()?;
+    match tool {
+        ImageTool::Compress if destination.extension().and_then(|ext| ext.to_str()) == Some("png") => {
+            write_png_compressed(&decoded, destination)?;
+        }
+        ImageTool::Compress | ImageTool::Background => {
+            let rgb = flatten_on_white(&decoded);
+            let quality = if tool == ImageTool::Compress { 0.6 } else { 0.92 };
+            let bytes = encode_jpeg(&rgb, quality)?;
+            std::fs::write(destination, bytes)?;
+        }
+        ImageTool::Metadata => write_without_metadata(&decoded, destination)?,
+    }
+    progress(1.0);
+    Ok(())
+}
+
+fn write_png_compressed(image: &DynamicImage, destination: &Path) -> Result<()> {
+    let rgba = image.to_rgba8();
+    let file = File::create(destination)?;
+    let encoder = PngEncoder::new_with_quality(BufWriter::new(file), CompressionType::Best, FilterType::Adaptive);
+    encoder
+        .write_image(rgba.as_raw(), rgba.width(), rgba.height(), ExtendedColorType::Rgba8)
+        .map_err(encode_error)?;
+    Ok(())
+}
+
+fn write_without_metadata(image: &DynamicImage, destination: &Path) -> Result<()> {
+    match destination.extension().and_then(|ext| ext.to_str()).unwrap_or("png") {
+        "jpg" | "jpeg" => {
+            let rgb = flatten_on_white(image);
+            let bytes = encode_jpeg(&rgb, 0.92)?;
+            std::fs::write(destination, bytes)?;
+        }
+        "webp" => write_webp(image, destination)?,
+        "tiff" | "tif" => image.save_with_format(destination, ImageFormat::Tiff).map_err(encode_error)?,
+        "bmp" => image.save_with_format(destination, ImageFormat::Bmp).map_err(encode_error)?,
+        _ => image.save_with_format(destination, ImageFormat::Png).map_err(encode_error)?,
+    }
+    Ok(())
 }
 
 fn decode_error(error: impl Display) -> ForgeError {

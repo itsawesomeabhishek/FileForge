@@ -55,9 +55,10 @@ phases; only the convert wheel exists so far.
   wheel disabled), the drop still converts, Shift is not left
   stuck. Side effect: plain Shift+click range-select in Explorer
   is unavailable while the wheel is enabled.
-- Modifier mapping (`mode_for`): Shift = convert, Alt+Shift =
-  tools, Ctrl+Shift = file actions. Only convert is enabled
-  (`mode_enabled`) until the other wheels have content.
+- Modifier mapping (`mode_for`): Shift = convert, Ctrl = tools.
+  Ctrl wins if both are held. The wheel stays open until the
+  drop. File actions are not on a key yet. Convert and tools
+  are the enabled modes (`mode_enabled`).
 - `wheel.rs`: one pre-created transparent, always-on-top,
   non-activating overlay window. It covers the monitor under the
   cursor so a drop anywhere lands on it (cancel) instead of on
@@ -144,7 +145,20 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
-- Nothing.
+- Release 0.1.3: Ctrl tools, hover tick, Markdown, HTML, CSV,
+  TSV, PDF text, and ZIP, TAR, and GZIP.
+
+- Shift wheel now includes markdown, HTML, CSV, TSV, PDF text,
+  and ZIP, TAR, and GZIP. RAR, DOCX, Pages, slides, XLSX, ODS,
+  EPUB, and PDF page images stay off the wheel.
+- Tangerine tools on Ctrl. Images: Compress, Metadata, Add
+  background. Video and GIF: Compress, Mute, Snapshot, Metadata.
+  Audio: Compress, Normalize, Mono, Metadata, Visualize.
+  Crop, trim, redact, speed, split, bleep, PDF, Office, Pages,
+  slides, spreadsheets, and EPUB stay off the wheel until an
+  engine or editor can finish them. Originals are never modified.
+- Hover tick: moving onto a wedge plays a short original click,
+  the same moment Tangerine's landing page plays its highlight sound.
 
 ## Next Up
 
@@ -152,8 +166,9 @@ phases; only the convert wheel exists so far.
   Paths, Duplicate, SHA-256), progress pill and card with the
   citrus companion, four-tab Settings (modifier display, excluded
   apps UI polish), hotkeys for tools and file actions.
-- Wheel Phase 3: simple tool windows (compress, metadata, resize,
-  rotate, create PDF, PDF merge/split, audio trim/normalize).
+- Wheel Phase 3: the remaining simple tools (resize, rotate,
+  create PDF, PDF merge/split, audio trim/normalize). Compress,
+  metadata strip, and add-background already run from the wheel.
 - Wheel Phase 4: editor tools (crop, photo edit, background frame,
   video trim/crop/speed/join/frames/split, audio visualizer).
 - Wheel Phase 5: redact, collage, organize PDF, bleep audio,

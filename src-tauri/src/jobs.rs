@@ -8,6 +8,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::diag;
+use crate::engines::tools::{self, FileTool};
 use crate::engines::{self, ConversionRequest, ConvertOptions};
 use crate::error::ForgeError;
 use crate::ffmpeg::{CancelToken, ProgressFn};
@@ -56,6 +57,7 @@ struct Work {
     source_format: FileFormat,
     target: FileFormat,
     destination: PathBuf,
+    tool: Option<FileTool>,
 }
 
 type Entries = Arc<Mutex<Vec<Entry>>>;
@@ -171,6 +173,7 @@ impl JobQueue {
                     source_format: from,
                     target,
                     destination: destination.clone(),
+                    tool: None,
                 });
                 guard.push(Entry {
                     info,
@@ -193,6 +196,85 @@ impl JobQueue {
         drop(guard);
         publish(&self.app, jobs);
 
+        if let Ok(sender) = self.sender.lock() {
+            for work in queued {
+                let _ = sender.send(work);
+            }
+        }
+    }
+
+    /// Queues a file tool. The original is never modified; the result is a new file.
+    pub fn apply_file_tool(&self, paths: Vec<PathBuf>, tool: FileTool, settings: &SettingsStore) {
+        let settings = settings.get();
+        let mut guard = lock(&self.entries);
+        guard.retain(|entry| !entry.info.status.is_finished());
+        let mut queued = Vec::new();
+
+        for source in paths {
+            let detail = source
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| source.display().to_string());
+            let id = uuid::Uuid::new_v4().to_string();
+            let source_format = FileFormat::detect(&source);
+            let mut info = JobInfo {
+                id: id.clone(),
+                title: tool.title().to_string(),
+                detail,
+                category: source_format.map(FileFormat::category),
+                status: JobStatus::Waiting,
+                progress: 0.0,
+                error: None,
+                outputs: Vec::new(),
+            };
+            let failure = match source_format {
+                Some(format) if tools::accepts(tool, format) && source.is_file() => None,
+                Some(_) => Some(format!("{} cannot use this tool.", info.detail)),
+                None => Some(format!("Unsupported file type: {}", info.detail)),
+            };
+            if let (None, Some(format)) = (&failure, source_format) {
+                let directory = settings.output_directory(&source, &self.app);
+                let reserved: HashSet<String> = guard
+                    .iter()
+                    .filter(|entry| !entry.info.status.is_finished())
+                    .filter_map(|entry| entry.destination.as_ref())
+                    .filter_map(|dest| dest.file_name())
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .collect();
+                let destination = matrix::named_output(
+                    &source,
+                    tool.file_label(),
+                    tool.extension(format),
+                    &directory,
+                    &reserved,
+                );
+                queued.push(Work {
+                    id: id.clone(),
+                    source: source.clone(),
+                    source_format: format,
+                    target: FileFormat::Jpg,
+                    destination: destination.clone(),
+                    tool: Some(tool),
+                });
+                guard.push(Entry {
+                    info,
+                    cancel: CancelToken::new(),
+                    destination: Some(destination),
+                });
+            } else {
+                info.status = JobStatus::Failed;
+                info.error = failure;
+                guard.push(Entry {
+                    info,
+                    cancel: CancelToken::new(),
+                    destination: None,
+                });
+            }
+        }
+
+        let jobs = snapshot(&guard);
+        drop(guard);
+        publish(&self.app, jobs);
         if let Ok(sender) = self.sender.lock() {
             for work in queued {
                 let _ = sender.send(work);
@@ -301,7 +383,18 @@ fn run_work(app: &AppHandle, entries: &Entries, work: Work) {
         cancel,
         options: ConvertOptions { jpeg_quality },
     };
-    let result = engines::convert(&request);
+    let result = if let Some(tool) = work.tool {
+        tools::apply(
+            &work.source,
+            work.source_format,
+            tool,
+            &work.destination,
+            &request.progress,
+            &request.cancel,
+        )
+    } else {
+        engines::convert(&request)
+    };
 
     let mut revealed: Option<PathBuf> = None;
     let jobs = {

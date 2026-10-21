@@ -30,6 +30,8 @@ const EDGE_MARGIN: f64 = DISC_RADIUS + 8.0;
 pub enum Mode {
     Convert,
     Tools,
+    /// File actions (copy, reveal, duplicate). Not bound to a key yet.
+    #[allow(dead_code)]
     Actions,
 }
 
