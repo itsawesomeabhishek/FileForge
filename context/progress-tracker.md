@@ -145,7 +145,7 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
-- Crop editor: drag or type the kept area for one image or video.
+- Release 0.1.6: crop opens an editor for one image or video.
   Speed doubles a video, split cuts a video in half or writes one
   PDF per page, and PDF compress and metadata run from the Ctrl wheel.
 - Release 0.1.5: a drop stays on the wedge it was aimed at. The
@@ -161,11 +161,11 @@ phases; only the convert wheel exists so far.
   and ZIP, TAR, and GZIP. RAR, DOCX, Pages, slides, XLSX, ODS,
   EPUB, and PDF page images stay off the wheel.
 - Tangerine tools on Ctrl. Images: Compress, Metadata, Add
-  background. Video and GIF: Compress, Mute, Snapshot, Metadata.
-  Audio: Compress, Normalize, Mono, Metadata, Visualize.
-  Crop, trim, redact, speed, split, bleep, PDF, Office, Pages,
-  slides, spreadsheets, and EPUB stay off the wheel until an
-  engine or editor can finish them. Originals are never modified.
+  background, Crop. Video and GIF: Compress, Mute, Snapshot,
+  Metadata, Speed, Split, Crop. Audio: Compress, Normalize,
+  Channels (mono), Metadata, Visualize. PDF: Compress, Metadata,
+  Split. Redact, edit, annotate, trim, bleep, and PDF organize
+  stay off the wheel. Originals are never modified.
 - Hover tick: moving onto a wedge plays a short original click,
   the same moment Tangerine's landing page plays its highlight sound.
 
@@ -176,10 +176,12 @@ phases; only the convert wheel exists so far.
   citrus companion, four-tab Settings (modifier display, excluded
   apps UI polish), hotkeys for tools and file actions.
 - Wheel Phase 3: the remaining simple tools (resize, rotate,
-  create PDF, PDF merge/split, audio trim/normalize). Compress,
-  metadata strip, and add-background already run from the wheel.
-- Wheel Phase 4: editor tools (crop, photo edit, background frame,
-  video trim/crop/speed/join/frames/split, audio visualizer).
+  create PDF, PDF merge, audio trim). Compress, metadata strip,
+  add-background, video speed, and PDF split already run from
+  the wheel.
+- Wheel Phase 4: editor tools still to build (photo edit,
+  background frame, video trim/join/frames, audio trim). Crop,
+  video speed and split, and the waveform video already run.
 - Wheel Phase 5: redact, collage, organize PDF, bleep audio,
   update checker.
 - Make the modifiers configurable in Settings; add the optional

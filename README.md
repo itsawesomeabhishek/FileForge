@@ -21,7 +21,7 @@ closes so FileForge does not keep a browser engine running in the tray.
 ## Install
 
 1. Download
-   [`FileForge_0.1.5_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
+   [`FileForge_0.1.6_x64-setup.exe`](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
    and run it.
 2. You need Windows 10 or 11, 64-bit. WebView2 is already on current
    Windows 11.
