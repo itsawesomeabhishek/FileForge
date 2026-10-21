@@ -9,6 +9,22 @@ This is the Windows port of the macOS app. It is built with Tauri 2,
 React, and Rust, and bundles FFmpeg for audio, video, and some image
 conversions.
 
+## Install
+
+Download `FileForge_0.1.0_x64-setup.exe` from the
+[latest release](https://github.com/itsawesomeabhishek/FileForge/releases/latest)
+and run it. Windows 10 or 11 (64-bit) and WebView2 are required;
+WebView2 is already installed on current Windows 11.
+
+The app has no window of its own. After installing, find the FileForge
+icon in the system tray (the ^ overflow area near the clock).
+
+Windows SmartScreen may say the publisher is unknown, because the
+installer is not code-signed yet. Choose **More info**, then **Run
+anyway**.
+
+To remove it, use **Settings > Apps > Installed apps**.
+
 ## Use
 
 - **Shift + drag** files from Explorer or the desktop, then drop on a

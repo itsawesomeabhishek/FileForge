@@ -112,6 +112,11 @@ phases; only the convert wheel exists so far.
     carried over.
   - References to the macOS source app `exploit` are unchanged.
   - `cargo test` (70) and `npm run build` pass.
+- Ready to use: new app icon (radial wheel), an Install section in
+  the README, and `.github/workflows/release.yml`, which builds the
+  NSIS installer and publishes a GitHub release on every `v*` tag.
+  The installer was verified locally: silent install, launch, and
+  uninstall.
 - Added community files: `LICENSE` (GPL-3.0, chosen because the
   bundled FFmpeg build is GPL), `CODE_OF_CONDUCT.md` (Contributor
   Covenant 2.1), `CONTRIBUTING.md`, `SECURITY.md`; license metadata
