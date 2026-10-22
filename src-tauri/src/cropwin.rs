@@ -18,10 +18,9 @@ pub fn open(app: &AppHandle, path: String) {
     if let Ok(mut guard) = TARGET.lock() {
         *guard = Some(path.clone());
     }
-    let app = app.clone();
-    if let Err(error) = app.clone().run_on_main_thread(move || show(&app, path)) {
-        diag::log(&format!("crop: {error}"));
-    }
+    // Build directly. On Windows, creating a WebView2 window from a
+    // synchronous command deadlocks and the window stays white.
+    show(app, path);
 }
 
 fn show(app: &AppHandle, path: String) {

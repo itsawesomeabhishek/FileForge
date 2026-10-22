@@ -191,22 +191,29 @@ pub struct CropPreview {
 }
 
 /// Picture the crop editor draws, and the pixel size the numbers use.
+/// Runs off the UI thread so a large photo does not freeze the window white.
 #[tauri::command]
-pub fn crop_preview(path: String) -> Result<CropPreview, String> {
-    let path = PathBuf::from(&path);
-    let format = FileFormat::detect(&path).ok_or_else(|| format!("Unsupported file type: {}", path.display()))?;
-    let preview = crate::engines::crop::preview(&path, format).map_err(|error| error.to_string())?;
-    Ok(CropPreview {
-        width: preview.width,
-        height: preview.height,
-        png_base64: preview.png_base64,
-        video: preview.video,
+pub async fn crop_preview(path: String) -> Result<CropPreview, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&path);
+        let format = FileFormat::detect(&path)
+            .ok_or_else(|| format!("Unsupported file type: {}", path.display()))?;
+        let preview = crate::engines::crop::preview(&path, format).map_err(|error| error.to_string())?;
+        Ok(CropPreview {
+            width: preview.width,
+            height: preview.height,
+            png_base64: preview.png_base64,
+            video: preview.video,
+        })
     })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 /// Opens the crop editor for one image or video. Nothing is written yet.
+/// Async so Windows can create the WebView2 window without deadlocking.
 #[tauri::command]
-pub fn open_crop_editor(path: String, app: AppHandle) {
+pub async fn open_crop_editor(path: String, app: AppHandle) {
     crate::cropwin::open(&app, path);
 }
 

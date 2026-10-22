@@ -145,6 +145,9 @@ phases; only the convert wheel exists so far.
 
 ## In Progress
 
+- Release 0.1.7: the crop window is created from an async command.
+  A synchronous command on Windows deadlocks WebView2 and leaves
+  a blank window.
 - Release 0.1.6: crop opens an editor for one image or video.
   Speed doubles a video, split cuts a video in half or writes one
   PDF per page, and PDF compress and metadata run from the Ctrl wheel.

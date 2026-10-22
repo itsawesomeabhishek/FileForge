@@ -1,6 +1,6 @@
 [package]
 name = "fileforge"
-version = "0.1.6"
+version = "0.1.7"
 description = "FileForge - local file converter for Windows"
 authors = ["Abhishek"]
 license = "GPL-3.0-only"

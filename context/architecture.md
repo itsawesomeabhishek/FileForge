@@ -45,7 +45,8 @@
   window close does not exit the tray app.
 - `src-tauri/src/cropwin.rs` - the crop editor. It shows one
   image or video frame; the page reports the kept rectangle and
-  Rust writes a new file. The original is not changed.
+  Rust writes a new file. The original is not changed. The window
+  is created from an async command so WebView2 does not deadlock.
 - `src-tauri/src/picker.rs` - menu/hotkey entry: file dialog, then
   the wheel in picker mode; global shortcut registration.
 - `src/` - React UI. Calls Tauri commands, listens to events.

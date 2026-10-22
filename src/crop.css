@@ -99,6 +99,11 @@
   font: inherit;
 }
 
+.crop-loading {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 .crop-error {
   margin: 0;
   padding: 0 18px 14px;

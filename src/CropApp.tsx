@@ -206,6 +206,7 @@ export default function CropApp() {
         </div>
       </header>
       <div className="crop-stage">
+        {!picture && !error && <p className="crop-loading">Reading this file</p>}
         {picture && rect && (
           <div className="crop-frame" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
             <img ref={imageRef} src={`data:image/png;base64,${picture.pngBase64}`} alt="" draggable={false} />
